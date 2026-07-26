@@ -9,6 +9,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **Quiz Mode** — every "Show Consultant Answer" question on the board, plus a hand-written set of calculation drills, acronym checks, and compare/contrast cards, turned into a flip-card deck. Rate yourself after each card; unmastered ones resurface until you get them.
 - **AI doubt-solver** — an "Ask AI" chat (and a floating quick-launch button from any page) powered by [Puter.js](https://developer.puter.com/), which gives free access to Claude/GPT models client-side with **no API key required**.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
+- **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
 
 ## Run locally
 
@@ -39,16 +40,28 @@ gradlew.bat assembleDebug # Windows
 
 The APK lands at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
+## How update checks work
+
+Both CI workflows stamp the **same version number** — `git rev-list --count HEAD`, i.e. the commit count — onto every build, from two independent sources that always agree because they run on the same commit:
+
+- `build-apk.yml` writes that number into `android/app/build.gradle` (`versionCode`/`versionName`) and into `www/assets/build-version.js` (`window.APP_VERSION_CODE`), which gets baked into the APK.
+- `deploy-pages.yml` writes the same number into `www/version.json`, published live at `https://<user>.github.io/mes-architect-app/version.json`.
+
+`www/assets/update-check.js` runs only when `APP_VERSION_CODE > 0` (i.e. only inside the installed app, never on the plain website). It fetches `version.json` fresh (no-cache) on launch and again the instant the `online` event fires, and shows an in-app banner with an **Update Now** button (opens the OS browser to the latest GitHub Release APK — no extra native plugin needed) whenever the live version is newer than the installed one. There's also a manual "Check for updates" link in the sidebar footer.
+
 ## Project structure
 
 ```
 www/                 the actual web app (this is what ships)
   index.html          all 18 modules — content + inline styles/scripts
   assets/
-    enhance.css        styles for stars, saved cards, quiz cards, the AI FAB
+    enhance.css        styles for stars, saved cards, quiz cards, the AI FAB, update banner
     enhance.js         bookmark + quiz engine logic (scans the DOM, no build step)
     quiz-data.js       hand-curated bonus quiz cards (calculations, acronyms, scenarios)
+    build-version.js   CI-stamped app version (native builds only; see "How update checks work")
+    update-check.js    checks version.json and prompts to update inside the installed app
   manifest.json         PWA manifest
+  version.json           CI-stamped latest version + APK download URL
   sw.js                 service worker (offline app-shell caching)
   icons/                app icons
 android/               Capacitor-generated native Android project

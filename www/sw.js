@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mes-architect-v2';
+const CACHE_NAME = 'mes-architect-v3';
 const APP_SHELL = [
   './',
   './index.html',
@@ -7,6 +7,8 @@ const APP_SHELL = [
   './assets/enhance.js',
   './assets/quiz-data.js',
   './assets/responsive.css',
+  './assets/build-version.js',
+  './assets/update-check.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

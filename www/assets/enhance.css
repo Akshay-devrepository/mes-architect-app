@@ -224,3 +224,74 @@
   #askAiFab { right: 14px; bottom: 14px; padding: 10px 14px; font-size: 11px; }
   .quiz-rate-row { flex-direction: column; }
 }
+
+/* ── APP UPDATE BANNER (installed Android app only) ── */
+#updateBanner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  background: var(--surface2);
+  border-top: 1px solid var(--amber2);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.4);
+  font-family: var(--sans);
+  animation: updateBannerIn 0.3s ease;
+}
+@keyframes updateBannerIn {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.update-banner-text { color: var(--text); font-size: 13px; }
+.update-banner-text strong { color: var(--amber); }
+.update-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+#updateNowBtn {
+  background: var(--amber);
+  color: #0b0f1a;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+#updateNowBtn:hover { background: var(--amber2); }
+#updateLaterBtn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border2);
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+}
+#updateLaterBtn:hover { color: var(--text); border-color: var(--text-dim); }
+
+@media (max-width: 480px) {
+  #updateBanner { padding: 12px 14px; }
+  .update-banner-actions { width: 100%; }
+  #updateNowBtn, #updateLaterBtn { flex: 1; }
+}
+
+/* ── MANUAL "CHECK FOR UPDATES" (sidebar footer, native app only) ── */
+#updateCheckRow {
+  margin-top: 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+#updateCheckLink {
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+#updateCheckLink:hover { color: var(--amber); }
+#updateCheckStatus { color: var(--cyan); margin-left: 4px; }
+#updateCheckVersion { color: var(--text-muted); opacity: 0.6; margin-top: 3px; }

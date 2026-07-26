@@ -22,6 +22,21 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Write version.json (same git-commit-count scheme as the APK build)
+        run: |
+          VERSION_CODE=$(git rev-list --count HEAD)
+          VERSION_NAME="1.0.$VERSION_CODE"
+          cat > www/version.json <<EOF
+          {
+            "versionCode": $VERSION_CODE,
+            "versionName": "$VERSION_NAME",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
+          }
+          EOF
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

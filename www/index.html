@@ -1360,7 +1360,7 @@ code {
   <div class="nav-item" onclick="showSection(16)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">17</span> Quiz Mode<span class="nav-dot"></span></div>
   <div class="nav-item" onclick="showSection(17)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">18</span> ★ Saved<span class="nav-dot" id="savedCountDot" style="background:transparent;width:auto;height:auto;border-radius:0;font-family:var(--mono);font-size:9px;color:var(--amber);"></span></div>
 
-  <div class="sidebar-footer">
+  <div class="sidebar-footer" id="sidebarFooter">
     <div class="level-badge">▲ ARCHITECT TRACK</div>
   </div>
 </nav>
@@ -21205,6 +21205,8 @@ document.getElementById('progressFill').style.width = Math.round((1/totalSection
 </script>
 <script src="assets/quiz-data.js"></script>
 <script src="assets/enhance.js"></script>
+<script src="assets/build-version.js"></script>
+<script src="assets/update-check.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
