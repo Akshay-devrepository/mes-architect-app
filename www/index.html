@@ -1306,8 +1306,13 @@ code {
 .star-quad.r .star-quad-label { color: var(--purple); }
 
 </style>
+<!-- Loaded after the inline styles above so its overrides win the cascade -->
+<link rel="stylesheet" href="assets/responsive.css">
 </head>
 <body>
+
+<!-- ══ SIDEBAR BACKDROP (mobile off-canvas menu) ══ -->
+<div id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
 <!-- ══ FLOATING ASK-AI LAUNCHER ══ -->
 <button id="askAiFab" onclick="askAiAboutCurrentSection()" title="Ask AI about this topic">
@@ -1364,13 +1369,18 @@ code {
 <main id="main">
 
   <div class="topbar">
-    <div>
-      <div class="topbar-breadcrumb">MES CONCEPT BOARD</div>
-      <div class="topbar-section" id="topbarTitle">01 — MES Industry Overview</div>
+    <div class="topbar-left">
+      <button id="menuToggleBtn" onclick="toggleSidebar()" title="Toggle menu" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div>
+        <div class="topbar-breadcrumb">MES CONCEPT BOARD</div>
+        <div class="topbar-section" id="topbarTitle">01 — MES Industry Overview</div>
+      </div>
     </div>
     <div class="topbar-controls">
-      <button class="btn-sm" onclick="prevSection()">← PREV</button>
-      <button class="btn-sm" onclick="nextSection()">NEXT →</button>
+      <button class="btn-sm" onclick="prevSection()">← <span class="btn-label">PREV</span></button>
+      <button class="btn-sm" onclick="nextSection()"><span class="btn-label">NEXT</span> →</button>
     </div>
   </div>
 
@@ -21010,6 +21020,9 @@ function showSection(index) {
 
   if (index === 16 && window.renderQuiz) window.renderQuiz();
   if (index === 17 && window.renderSaved) window.renderSaved();
+
+  // On phones/small tablets, picking a topic should close the drawer menu
+  if (window.innerWidth <= 900) closeSidebar();
 }
 
 function nextSection() {
@@ -21018,6 +21031,26 @@ function nextSection() {
 function prevSection() {
   if (currentSection > 0) showSection(currentSection - 1);
 }
+
+// ── COLLAPSIBLE MENU ──
+// Below 900px the sidebar is a closed-by-default overlay drawer.
+// Above 900px it's open-by-default and pushes the content over when collapsed.
+const SIDEBAR_PREF_KEY = 'mes_sidebar_toggled';
+function toggleSidebar() {
+  const toggled = document.body.classList.toggle('sidebar-toggled');
+  localStorage.setItem(SIDEBAR_PREF_KEY, toggled ? '1' : '0');
+}
+function closeSidebar() {
+  // "toggled" means open on mobile, so closing there just means removing the class.
+  // On desktop the sidebar is open by default, so there's nothing to close here.
+  if (window.innerWidth <= 900) document.body.classList.remove('sidebar-toggled');
+}
+(function initSidebarState() {
+  const saved = localStorage.getItem(SIDEBAR_PREF_KEY);
+  const isMobile = window.innerWidth <= 900;
+  if (isMobile) return; // always start closed on phones/small tablets
+  if (saved === '1') document.body.classList.add('sidebar-toggled');
+})();
 
 // ── ACCORDIONS ──
 function toggleAcc(header) {
@@ -21163,6 +21196,7 @@ document.addEventListener('keydown', (e) => {
   if (e.target.id === 'ai-input') return;
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSection();
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevSection();
+  if (e.key === 'Escape') closeSidebar();
 });
 
 // ── INIT ──

@@ -311,6 +311,19 @@ function renderQuiz() {
 window.renderSaved = renderSaved;
 window.renderQuiz = renderQuiz;
 
+// ── Wrap every table so a wide one scrolls inside itself on small
+//    screens instead of forcing the whole page to scroll sideways ──
+function wrapTables() {
+  document.querySelectorAll('.section table').forEach((table) => {
+    if (table.closest('.tbl-scroll')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'tbl-scroll';
+    table.parentNode.insertBefore(wrap, table);
+    wrap.appendChild(table);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   injectStars();
+  wrapTables();
 });

@@ -1,0 +1,181 @@
+/* ══════════════════════════════════════════
+   RESPONSIVE / COLLAPSIBLE MENU OVERRIDES
+   Loaded after the page's inline <style> block, so equal-
+   specificity selectors here win the cascade without !important.
+   Breakpoints: 900px = drawer vs push sidebar, 700px = phone,
+   480px = small phone.
+══════════════════════════════════════════ */
+
+/* ── COLLAPSIBLE SIDEBAR (all screen sizes) ── */
+#sidebar {
+  transition: transform 0.28s ease;
+}
+#main {
+  transition: margin-left 0.28s ease;
+}
+#sidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,14,0.6);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 99;
+}
+
+/* Mobile / small-tablet default: drawer closed, overlays content when open */
+@media (max-width: 900px) {
+  #sidebar { transform: translateX(-100%); }
+  #main { margin-left: 0; }
+  body.sidebar-toggled #sidebar { transform: translateX(0); box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
+  body.sidebar-toggled #sidebarBackdrop { opacity: 1; pointer-events: auto; }
+}
+
+/* Desktop / large tablet default: sidebar open and pushes content over;
+   toggling collapses it fully so the reading column can go full width. */
+@media (min-width: 901px) {
+  #sidebar { transform: translateX(0); }
+  #main { margin-left: 260px; }
+  #sidebarBackdrop { display: none; }
+  body.sidebar-toggled #sidebar { transform: translateX(-100%); }
+  body.sidebar-toggled #main { margin-left: 0; }
+}
+
+/* ── HAMBURGER BUTTON ── */
+.topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.topbar-left > div { min-width: 0; }
+#menuToggleBtn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+}
+#menuToggleBtn:hover { border-color: var(--amber); }
+#menuToggleBtn span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--text-dim);
+  border-radius: 1px;
+  transition: background 0.2s;
+}
+#menuToggleBtn:hover span { background: var(--amber); }
+
+/* ── TOPBAR ── */
+.topbar { padding: 10px 16px; gap: 10px; }
+.topbar-section {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 46vw;
+}
+.topbar-controls { flex-shrink: 0; }
+
+@media (max-width: 700px) {
+  .topbar { padding: 10px 12px; }
+  .topbar-breadcrumb { display: none; }
+  .topbar-section { font-size: 12px; max-width: 42vw; }
+  .btn-sm { padding: 6px 10px; }
+}
+
+@media (max-width: 480px) {
+  .topbar-controls .btn-label { display: none; }
+  .btn-sm { padding: 7px 9px; }
+}
+
+/* ── SIDEBAR CONTENT SPACING ON NARROW DRAWER ── */
+@media (max-width: 340px) {
+  #sidebar { width: 88vw; min-width: 0; }
+}
+
+/* ── SECTION LAYOUT / TYPOGRAPHY ── */
+.section { padding: 40px 40px 80px; }
+.section-title { font-size: clamp(20px, 4vw, 28px); }
+
+@media (max-width: 1024px) {
+  .section { padding: 28px 24px 60px; }
+}
+@media (max-width: 700px) {
+  .section { padding: 20px 16px 56px; }
+  .section-header { margin-bottom: 24px; padding-bottom: 16px; }
+  .section-desc { font-size: 13px; }
+  body { font-size: 13px; }
+}
+@media (max-width: 480px) {
+  .section { padding: 16px 12px 56px; }
+}
+
+/* ── GENERIC MULTI-COLUMN GRIDS REFLOW BY AVAILABLE WIDTH ── */
+@media (max-width: 1024px) {
+  .grid-3, .grid-4, .dd-3col {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .grid-2, .dd-2col {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .grid-2, .grid-3, .grid-4, .dd-2col, .dd-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── CONCEPT CARDS / QUESTION CARDS ── */
+@media (max-width: 700px) {
+  .dd-header { padding: 14px 16px; padding-right: 44px; gap: 10px; }
+  .dd-icon { width: 30px; height: 30px; font-size: 14px; }
+  .dd-title { font-size: 14px; }
+  .dd-summary-text { font-size: 12.5px; }
+  .dd-body-inner { padding: 18px 16px; }
+  .dd-btn-row { padding: 0 16px 12px; flex-wrap: wrap; }
+  .q-box { padding: 12px 14px; }
+  .card { padding: 16px; }
+}
+
+/* ── TABLES: never let a wide table force page-level horizontal scroll ── */
+.tbl-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 16px 0;
+}
+.tbl-scroll table { margin: 0 !important; }
+@media (max-width: 700px) {
+  .tbl, .tbl-scroll table { font-size: 12px; }
+  .tbl th, .tbl td, .tbl-scroll th, .tbl-scroll td { padding: 6px 8px !important; }
+}
+
+/* ── AI CHAT ── */
+@media (max-width: 700px) {
+  #ai-chat-box { height: min(70vh, 560px); }
+  .ai-chat-sub { display: none; }
+  .quick-prompts { padding: 0 12px 10px; }
+  .ai-input-row { padding: 10px 12px; }
+}
+
+/* ── QUIZ MODE ── */
+@media (max-width: 700px) {
+  .flip-card { min-height: 260px; }
+  .flip-card-inner, .flip-face { min-height: 260px; }
+  .flip-face { padding: 18px; }
+  .flip-face-text { font-size: 13.5px; }
+  .quiz-toolbar { gap: 8px; }
+  .quiz-stat, .quiz-select { font-size: 10px; padding: 5px 8px; }
+}
+
+/* ── SAVED CARDS ── */
+@media (max-width: 480px) {
+  .saved-card { padding: 12px 14px; }
+}
+
+/* ── MISC SAFETY NETS ── */
+img, svg, video, iframe { max-width: 100%; }
