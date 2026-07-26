@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mes-app",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["-y", "http-server", "www", "-p", "5173", "-c-1"],
+      "port": 5173
+    }
+  ]
+}

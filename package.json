@@ -1,0 +1,30 @@
+{
+  "name": "mes-architect-app",
+  "version": "1.0.0",
+  "description": "Interactive MES / ISA-95 / ISA-88 concept board, interview-prep coach, flashcard quiz engine, and bookmarking — deployable as a website, PWA, or Android app.",
+  "scripts": {
+    "serve": "http-server www -p 5173 -c-1",
+    "gen-icons": "node gen-icons.js",
+    "cap:sync": "cap sync android",
+    "cap:open": "cap open android",
+    "cap:build": "cd android && gradlew.bat assembleDebug"
+  },
+  "keywords": [
+    "mes",
+    "isa-95",
+    "isa-88",
+    "manufacturing",
+    "interview-prep",
+    "pwa"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.2",
+    "@capacitor/core": "^8.4.2",
+    "http-server": "^14.1.1",
+    "sharp": "^0.35.3"
+  }
+}

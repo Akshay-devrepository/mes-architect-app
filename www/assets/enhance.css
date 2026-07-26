@@ -1,0 +1,226 @@
+/* ══════════════════════════════════════════
+   ENHANCEMENTS — stars, saved, quiz, ask-ai fab
+   Loaded after the inline <style> in index.html,
+   reuses the same CSS custom properties.
+══════════════════════════════════════════ */
+
+/* ── STAR BUTTON ── */
+.star-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: rgba(6,11,20,0.6);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  z-index: 5;
+  transition: all 0.15s;
+}
+.star-btn:hover { border-color: var(--amber2); color: var(--amber); }
+.star-btn.starred { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+.dd-wrap, .q-box { position: relative; }
+.dd-header { padding-right: 44px; }
+.q-box .star-btn { top: 8px; right: 8px; width: 26px; height: 26px; font-size: 13px; }
+
+/* ── SAVED SECTION ── */
+.saved-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 13px;
+  border: 1px dashed var(--border2);
+  border-radius: 8px;
+}
+.saved-grid { display: flex; flex-direction: column; gap: 10px; }
+.saved-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: 6px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.saved-card:hover { border-color: var(--amber2); transform: translateX(2px); }
+.saved-card-type {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.saved-card-title { font-family: var(--display); font-size: 14px; color: var(--text); font-weight: 600; }
+.saved-card-snip { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.saved-card-remove {
+  float: right;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.saved-card-remove:hover { color: var(--red); }
+
+/* ── QUIZ MODE ── */
+.quiz-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.quiz-stat {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+.quiz-stat b { color: var(--amber); }
+.quiz-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+.quiz-progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.quiz-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber), var(--cyan));
+  transition: width 0.3s ease;
+}
+.quiz-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.flip-card {
+  width: 100%;
+  max-width: 640px;
+  min-height: 220px;
+  perspective: 1400px;
+  cursor: pointer;
+}
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.flip-face.front { border-left: 4px solid var(--cyan); }
+.flip-face.back { border-left: 4px solid var(--amber); transform: rotateY(180deg); }
+.flip-face-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.flip-face-text { font-size: 15px; color: var(--text); line-height: 1.6; }
+.flip-hint {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: -6px;
+}
+.quiz-rate-row { display: flex; gap: 10px; width: 100%; max-width: 640px; }
+.quiz-rate-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quiz-rate-btn.again:hover { border-color: var(--red); color: var(--red); }
+.quiz-rate-btn.good:hover { border-color: var(--green); color: var(--green); }
+.quiz-done {
+  text-align: center;
+  padding: 50px 20px;
+}
+.quiz-done-title { font-family: var(--display); font-size: 22px; color: var(--amber); margin-bottom: 10px; }
+.quiz-done-sub { color: var(--text-dim); font-size: 13px; margin-bottom: 20px; }
+.quiz-restart-btn {
+  background: var(--amber);
+  color: var(--bg);
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+/* ── ASK AI FLOATING BUTTON ── */
+#askAiFab {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--amber), var(--amber2));
+  color: #0b0f1a;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(245,158,11,0.35);
+  transition: transform 0.15s;
+}
+#askAiFab:hover { transform: translateY(-2px) scale(1.03); }
+#askAiFabIcon { font-size: 15px; }
+
+@media (max-width: 720px) {
+  #askAiFab { right: 14px; bottom: 14px; padding: 10px 14px; font-size: 11px; }
+  .quiz-rate-row { flex-direction: column; }
+}
