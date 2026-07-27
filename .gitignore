@@ -1,3 +1,8 @@
+# NEVER commit this — it's the plaintext license keys for every paid module
+# and the bundle master key. If this ends up in a commit, every module is
+# permanently free for anyone who reads git history, even after deleting it.
+LICENSE-KEYS-SECRET.md
+
 node_modules/
 android/app/build/
 android/build/

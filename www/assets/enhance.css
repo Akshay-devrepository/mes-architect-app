@@ -380,3 +380,116 @@
   .home-card-title { font-size: 13.5px; }
   .home-card-desc { font-size: 12px; }
 }
+
+/* ── LOCKED HOME CARD BADGE ── */
+.home-card.locked { border-left: 3px solid var(--amber); }
+.home-card-locked { color: var(--amber); margin-left: 4px; }
+
+/* ── PAID-MODULE LOCK GATE ── */
+.locked-gate {
+  background: var(--surface);
+  border: 1px solid var(--amber2);
+  border-radius: 10px;
+  padding: 28px 24px;
+  text-align: center;
+  max-width: 480px;
+  margin: 20px auto 0;
+}
+.locked-icon { font-size: 34px; margin-bottom: 12px; }
+.locked-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.locked-desc {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.locked-input-row {
+  display: flex;
+  gap: 8px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.locked-key-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  outline: none;
+}
+.locked-key-input:focus { border-color: var(--amber); }
+.locked-unlock-btn {
+  padding: 9px 18px;
+  background: var(--amber);
+  border: none;
+  border-radius: 6px;
+  color: #0b0f1a;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.locked-unlock-btn:hover { background: var(--amber2); }
+.locked-unlock-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.locked-error {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--red);
+}
+
+@media (max-width: 480px) {
+  .locked-gate { padding: 22px 16px; }
+  .locked-input-row { flex-direction: column; }
+}
+
+/* ── GLOBAL "ENTER LICENSE KEY" (sidebar footer) ── */
+#globalLicenseRow {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.global-license-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.global-license-input-row { display: flex; gap: 6px; }
+.global-license-input-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  outline: none;
+}
+.global-license-input-row input:focus { border-color: var(--amber); }
+.global-license-input-row button {
+  padding: 6px 12px;
+  background: var(--amber);
+  border: none;
+  border-radius: 5px;
+  color: #0b0f1a;
+  font-weight: 700;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.global-license-status {
+  font-size: 10px;
+  color: var(--cyan);
+  margin-top: 6px;
+}

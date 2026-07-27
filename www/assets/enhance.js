@@ -66,33 +66,47 @@ function updateSavedCount() {
 }
 
 // ── Inject stars on every concept card and question card ──
+// Safe to call more than once (e.g. after a locked module is unlocked and
+// its cards appear in the DOM for the first time): already-starred elements
+// are skipped, and ids are scoped per-section + a within-section counter
+// rather than a single global counter, so a module unlocked out of order
+// can never end up reusing an id an earlier module's card already has.
 function injectStars() {
-  document.querySelectorAll('.dd-wrap').forEach((wrap, i) => {
+  const ddCounters = {};
+  document.querySelectorAll('.dd-wrap').forEach((wrap) => {
     const header = wrap.querySelector('.dd-header');
-    if (!header) return;
-    const id = 'dd-' + i;
+    if (!header || header.querySelector('.star-btn')) return;
+    const sec = sectionIndexOf(wrap);
+    const secKey = sec === null ? 'x' : sec;
+    ddCounters[secKey] = (ddCounters[secKey] || 0) + 1;
+    const id = 'dd-' + secKey + '-' + ddCounters[secKey];
     const title = wrap.querySelector('.dd-title');
     const label = wrap.querySelector('.dd-label');
     const summary = wrap.querySelector('.dd-summary-text');
     const meta = {
       type: 'concept',
-      section: sectionIndexOf(wrap),
-      title: title ? title.textContent.trim() : ('Concept ' + i),
+      section: sec,
+      title: title ? title.textContent.trim() : ('Concept ' + id),
       label: label ? label.textContent.trim() : '',
       snippet: truncate(summary ? summary.textContent : '', 140)
     };
     header.appendChild(makeStarBtn(id, meta));
   });
 
-  document.querySelectorAll('.q-box').forEach((box, i) => {
-    const id = 'qa-' + i;
+  const qaCounters = {};
+  document.querySelectorAll('.q-box').forEach((box) => {
+    if (box.querySelector('.star-btn')) return;
+    const sec = sectionIndexOf(box);
+    const secKey = sec === null ? 'x' : sec;
+    qaCounters[secKey] = (qaCounters[secKey] || 0) + 1;
+    const id = 'qa-' + secKey + '-' + qaCounters[secKey];
     const qText = box.querySelector('.q-text');
     const label = box.querySelector('.q-label');
     const aText = box.querySelector('.a-text');
     const meta = {
       type: 'question',
-      section: sectionIndexOf(box),
-      title: qText ? qText.textContent.trim() : ('Question ' + i),
+      section: sec,
+      title: qText ? qText.textContent.trim() : ('Question ' + id),
       label: label ? label.textContent.trim() : '',
       snippet: truncate(aText ? aText.textContent : '', 140)
     };

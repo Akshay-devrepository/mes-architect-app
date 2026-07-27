@@ -10,6 +10,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **AI doubt-solver** — an "Ask AI" chat (and a floating quick-launch button from any page) powered by [Puter.js](https://developer.puter.com/), which gives free access to Claude/GPT models client-side with **no API key required**.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
 - **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
+- **Licensed modules** — module 1 is a free trial; modules 2–16 are encrypted and unlock with a license key, sold per-module or as a full bundle. See "Selling licensed access" below.
 
 ## Run locally
 
@@ -49,23 +50,89 @@ Both CI workflows stamp the **same version number** — `git rev-list --count HE
 
 `www/assets/update-check.js` runs only when `APP_VERSION_CODE > 0` (i.e. only inside the installed app, never on the plain website). It fetches `version.json` fresh (no-cache) on launch and again the instant the `online` event fires, and shows an in-app banner with an **Update Now** button (opens the OS browser to the latest GitHub Release APK — no extra native plugin needed) whenever the live version is newer than the installed one. There's also a manual "Check for updates" link in the sidebar footer.
 
+## Selling licensed access
+
+Modules 2–16 ship **encrypted** inside `www/index.html` (AES-256-GCM via the
+browser's native Web Crypto API) — only module 1 and the Quiz/Saved tabs are
+plaintext. This is a **client-side-only** scheme with no backend or server,
+which means it's honest about a real trade-off:
+
+- ✅ Locked module content is genuinely absent from the page — view-source
+  or a network inspector on a locked module shows only ciphertext, never
+  the real text. A wrong key fails cleanly (no garbled partial output).
+- ⚠️ Once a *correct* key decrypts a module in someone's browser, the
+  plaintext exists in that browser's memory/DOM — a sufficiently determined
+  person could still extract it from their own unlocked copy afterwards
+  (e.g. by saving the rendered page). There's no way to fully prevent that
+  without a real backend that never sends plaintext to unlicensed clients,
+  which is a much bigger project. This scheme deters casual sharing and
+  makes piracy require real effort; it isn't DRM.
+- ⚠️ Every buyer of a given module gets the **same** key for that module
+  (there's no backend to generate or check unique-per-purchase keys). If
+  someone posts their key publicly, that module is effectively free until
+  you rotate its key (re-run the script below and re-sell).
+
+### How it works
+
+- **Per-module keys** unlock just that one module.
+- **One bundle key** unlocks all 15 paid modules at once — enter it in the
+  sidebar's "🔑 Have a license key?" box and every locked module unlocks
+  immediately, no need to visit each one.
+- Unlocking is remembered per device (localStorage), so it only needs to
+  happen once.
+
+### Setting up sales (Gumroad / LemonSqueezy)
+
+1. Run `node scripts/encrypt-modules.js` locally (see below) — this writes
+   `LICENSE-KEYS-SECRET.md` at the repo root with the bundle key and all 15
+   individual module keys. **This file is gitignored on purpose — never
+   commit it, paste it into an issue/PR, or send it anywhere but to
+   yourself.**
+2. On Gumroad or LemonSqueezy, create one product per module you're selling
+   individually, plus one "Full Bundle" product. Do **not** use their
+   built-in auto-generated license-key feature (that's for verifying against
+   *their* API, which this app doesn't call) — instead, set each product's
+   delivery content/receipt text to literally contain that module's key
+   (or the bundle key, for the bundle product) from
+   `LICENSE-KEYS-SECRET.md`. The buyer copies that key into the app.
+3. Set your own prices — that's entirely up to you; nothing in the app
+   depends on price.
+
+### Rotating or re-generating keys
+
+Re-running `node scripts/encrypt-modules.js` regenerates **every** key from
+scratch (invalidating any already sold) and re-encrypts `www/index.html`.
+After running it:
+
+```bash
+npx cap sync android   # bake the newly-encrypted content into the Android build too
+```
+
+Then commit `www/index.html` (safe — only ciphertext) and push as normal.
+**Never** commit `LICENSE-KEYS-SECRET.md`.
+
 ## Project structure
 
 ```
 www/                 the actual web app (this is what ships)
   index.html          all 18 modules — content + inline styles/scripts
+                       (modules 2-16's bodies are AES-256-GCM ciphertext post-encryption)
   assets/
-    enhance.css        styles for stars, saved cards, quiz cards, the AI FAB, update banner
+    enhance.css        styles for stars, saved cards, quiz cards, the AI FAB, update banner, lock gate
     enhance.js         bookmark + quiz engine logic (scans the DOM, no build step)
     quiz-data.js       hand-curated bonus quiz cards (calculations, acronyms, scenarios)
+    license.js         client-side unlock logic (Web Crypto AES-GCM decrypt, see "Selling licensed access")
     build-version.js   CI-stamped app version (native builds only; see "How update checks work")
     update-check.js    checks version.json and prompts to update inside the installed app
   manifest.json         PWA manifest
   version.json           CI-stamped latest version + APK download URL
   sw.js                 service worker (offline app-shell caching)
   icons/                app icons
+scripts/
+  encrypt-modules.js    build step that locks modules 2-16 behind a license key (see above)
 android/               Capacitor-generated native Android project
 resources/            master icon/splash source images (used by `capacitor-assets`)
+LICENSE-KEYS-SECRET.md  the actual keys — gitignored, exists only after you run the script locally
 ```
 
 ## Notes on the AI chat
