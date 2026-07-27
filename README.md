@@ -140,6 +140,13 @@ re-encrypting anything.
    paste into the app: a Keygen-issued key if you set up the section above
    (recommended), or the raw key straight from `LICENSE-KEYS-SECRET.md` if
    you're skipping Keygen for now.
+3. Put each product's checkout/purchase URL into `PURCHASE_LINKS` near the
+   top of `www/assets/license.js` (1-based module number → URL, plus a
+   `bundle` URL) and redeploy. This is what powers the "💳 Buy access"
+   buttons on locked modules, locked Home cards, and the sidebar — without
+   it, locked modules just show "contact the seller" instead of a link.
+   Nothing here touches encryption/keys, so you can update prices or swap
+   links anytime with a plain redeploy.
 3. Set your own prices — that's entirely up to you; nothing in the app
    depends on price.
 

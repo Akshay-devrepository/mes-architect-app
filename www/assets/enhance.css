@@ -447,6 +447,26 @@
   color: var(--red);
 }
 
+.locked-buy-row { margin-bottom: 16px; }
+.locked-buy-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background: var(--amber);
+  color: #0b0f1a;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12.5px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.locked-buy-btn:hover { background: var(--amber2); }
+.locked-buy-fallback {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 @media (max-width: 480px) {
   .locked-gate { padding: 22px 16px; }
   .locked-input-row { flex-direction: column; }
@@ -488,8 +508,45 @@
   font-size: 10.5px;
   cursor: pointer;
 }
+.global-license-hint {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  margin-top: 5px;
+  line-height: 1.4;
+}
 .global-license-status {
   font-size: 10px;
   color: var(--cyan);
   margin-top: 6px;
 }
+.global-buy-link {
+  display: block;
+  text-align: center;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  background: var(--amber);
+  color: #0b0f1a;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 11px;
+  text-decoration: none;
+}
+.global-buy-link:hover { background: var(--amber2); }
+
+/* ── HOME CARD BUY LINK ── */
+.home-card-buy {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  background: var(--amber-dim);
+  border: 1px solid var(--amber2);
+  color: var(--amber);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.home-card-buy:hover { background: var(--amber2); color: #0b0f1a; }

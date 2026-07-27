@@ -2216,6 +2216,7 @@ function buildHomeCards() {
     const desc = src.querySelector('.section-desc').textContent;
     const done = visitedSections.has(i);
     const locked = !!secEl.querySelector('.locked-gate:not(.unlocked)');
+    const buyLink = locked && window.purchaseLinkFor ? window.purchaseLinkFor(i) : null;
     const card = document.createElement('div');
     card.className = 'home-card' + (done ? ' done' : '') + (locked ? ' locked' : '');
     card.onclick = () => showSection(i);
@@ -2227,8 +2228,12 @@ function buildHomeCards() {
           (!locked && done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
         '<div class="home-card-title">' + title + '</div>' +
         '<div class="home-card-desc">' + desc + '</div>' +
+        (buyLink ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Buy access</a>' : '') +
       '</div>' +
       '<div class="home-card-arrow">→</div>';
+    if (buyLink) {
+      card.querySelector('.home-card-buy').addEventListener('click', (e) => e.stopPropagation());
+    }
     grid.appendChild(card);
   }
   grid.dataset.built = '1';

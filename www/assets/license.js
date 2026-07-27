@@ -16,6 +16,25 @@ const LICENSE_PBKDF2_ITERATIONS = 100000; // must match scripts/encrypt-modules.
 const UNLOCKED_CACHE_KEY = 'mes_unlocked_content_v1'; // { [moduleIndex]: decryptedHtml }
 const BUNDLE_KEY_CACHE_KEY = 'mes_bundle_key_v1';
 
+// ── Purchase links — fill these in once your Gumroad/LemonSqueezy products
+// exist, then redeploy. This is a plain runtime config (not part of the
+// encryption build step), so you can update prices/links anytime without
+// re-running scripts/encrypt-modules.js or invalidating any keys.
+// Keys are 1-based module numbers to match LICENSE-KEYS-SECRET.md. ──
+const PURCHASE_LINKS = {
+  bundle: null, // e.g. 'https://yourname.gumroad.com/l/mes-architect-bundle'
+  modules: {
+    // 2: 'https://yourname.gumroad.com/l/mes-isa95',
+    // 3: 'https://yourname.gumroad.com/l/mes-isa88',
+    // ...add one per module you sell individually
+  }
+};
+
+function purchaseLinkFor(moduleIndex) {
+  return PURCHASE_LINKS.modules[moduleIndex + 1] || PURCHASE_LINKS.bundle || null;
+}
+window.purchaseLinkFor = purchaseLinkFor;
+
 // ── Keygen.sh integration (optional layer in front of the AES unlock below) ──
 // Set this to your Keygen account slug (Settings → the id in your dashboard
 // URL — public, not a secret) to let buyers enter a real Keygen-issued
@@ -221,16 +240,37 @@ window.tryGlobalUnlock = tryGlobalUnlock;
 function addGlobalLicenseUI() {
   const footer = document.getElementById('sidebarFooter');
   if (!footer || document.getElementById('globalLicenseRow')) return;
+  const buyRow = PURCHASE_LINKS.bundle
+    ? '<a class="global-buy-link" href="' + PURCHASE_LINKS.bundle + '" target="_blank" rel="noopener">💳 Get full access</a>'
+    : '';
   const row = document.createElement('div');
   row.id = 'globalLicenseRow';
   row.innerHTML =
+    buyRow +
     '<div class="global-license-label">🔑 Have a license key?</div>' +
     '<div class="global-license-input-row">' +
       '<input type="text" id="globalLicenseInput" placeholder="Paste key" autocomplete="off" autocapitalize="off" spellcheck="false">' +
       '<button onclick="tryGlobalUnlock()">Apply</button>' +
     '</div>' +
+    '<div class="global-license-hint">Same key works on any device — just paste it again here.</div>' +
     '<div id="globalLicenseStatus" class="global-license-status"></div>';
   footer.appendChild(row);
+}
+
+// Inserts a "Buy Access" link (or a "contact the seller" fallback if no
+// link is configured for this module yet) into a still-locked gate, right
+// above the key-entry row.
+function addBuyLinkToGate(gate) {
+  if (gate.querySelector('.locked-buy-row')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const link = purchaseLinkFor(idx);
+  const row = document.createElement('div');
+  row.className = 'locked-buy-row';
+  row.innerHTML = link
+    ? '<a class="locked-buy-btn" href="' + link + '" target="_blank" rel="noopener">💳 Buy access to this module</a>'
+    : '<div class="locked-buy-fallback">No purchase link set up yet — contact the seller for a license key.</div>';
+  const inputRow = gate.querySelector('.locked-input-row');
+  gate.insertBefore(row, inputRow);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -245,6 +285,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const idx = gate.dataset.module;
     if (cache[idx]) revealModule(gate, cache[idx]);
   });
+
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addBuyLinkToGate);
 
   // If a bundle key was validated before, auto-unlock anything still
   // locked (covers a case where more modules got added after they bought).
