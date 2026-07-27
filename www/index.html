@@ -1324,12 +1324,14 @@ code {
   <div class="sidebar-header">
     <div class="sidebar-logo">▲ MES Architect</div>
     <div class="sidebar-title">Concept Board &<br>Interview Prep</div>
-    <div class="sidebar-sub">// 15 Modules · Enterprise Level</div>
+    <div class="sidebar-sub">// 16 Modules · Enterprise Level</div>
   </div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-  
+
+  <div class="nav-item nav-item-home active" onclick="goHome()">⌂ Home</div>
+
   <div class="nav-section-label">Core Framework</div>
-  <div class="nav-item active" onclick="showSection(0)"><span class="nav-num">01</span> MES Industry Overview<span class="nav-dot"></span></div>
+  <div class="nav-item" onclick="showSection(0)"><span class="nav-num">01</span> MES Industry Overview<span class="nav-dot"></span></div>
   <div class="nav-item" onclick="showSection(1)"><span class="nav-num">02</span> ISA-95 Deep Dive<span class="nav-dot"></span></div>
   <div class="nav-item" onclick="showSection(2)"><span class="nav-num">03</span> ISA-88 Batch Control<span class="nav-dot"></span></div>
   <div class="nav-item" onclick="showSection(3)"><span class="nav-num">04</span> MES Functional Modules<span class="nav-dot"></span></div>
@@ -1373,21 +1375,35 @@ code {
       <button id="menuToggleBtn" onclick="toggleSidebar()" title="Toggle menu" aria-label="Toggle menu">
         <span></span><span></span><span></span>
       </button>
+      <button id="backBtn" class="nav-icon-btn" onclick="goBack()" title="Back" aria-label="Back">←</button>
+      <button id="homeBtn" class="nav-icon-btn" onclick="goHome()" title="Home" aria-label="Home">⌂</button>
       <div>
         <div class="topbar-breadcrumb">MES CONCEPT BOARD</div>
-        <div class="topbar-section" id="topbarTitle">01 — MES Industry Overview</div>
+        <div class="topbar-section" id="topbarTitle">Home</div>
       </div>
     </div>
-    <div class="topbar-controls">
+    <div class="topbar-controls" id="topbarSectionControls" style="display:none">
       <button class="btn-sm" onclick="prevSection()">← <span class="btn-label">PREV</span></button>
       <button class="btn-sm" onclick="nextSection()"><span class="btn-label">NEXT</span> →</button>
     </div>
   </div>
 
 <!-- ══════════════════════════════════════════
+     HOME — module picker
+══════════════════════════════════════════ -->
+<div class="section active" id="sec-home">
+  <div class="section-header">
+    <div class="section-tag">// MES ARCHITECT · CONCEPT BOARD</div>
+    <div class="section-title">Choose a Module</div>
+    <div class="section-desc">18 modules covering ISA-95, ISA-88, enterprise architecture, cloud, AI, and interview coaching. Tap any card to jump in — your place is saved as you go.</div>
+  </div>
+  <div class="home-grid" id="homeGrid"></div>
+</div><!-- end sec-home -->
+
+<!-- ══════════════════════════════════════════
      SECTION 1: MES INDUSTRY OVERVIEW
 ══════════════════════════════════════════ -->
-<div class="section active" id="sec-0">
+<div class="section" id="sec-0">
   <div class="section-header">
     <div class="section-tag">// MODULE 01 · FOUNDATIONAL</div>
     <div class="section-title">MES Industry Overview</div>
@@ -20969,7 +20985,7 @@ async function updateTwin(mesEvent) {
 
 <script>
 // ── STATE ──
-let currentSection = 0;
+let currentSection = null; // null while on Home
 const totalSections = 18;
 const sectionTitles = [
   '01 — MES Industry Overview',
@@ -20991,29 +21007,41 @@ const sectionTitles = [
   '17 — Quiz Mode',
   '18 — ★ Saved'
 ];
+const HOME_ICONS = ['🏭','📐','⚗️','🧩','🏛️','☁️','🗄️','🎯','🚀','🏗️','🗺️','🧠','🎓','⚡','🔗','🤖','🃏','⭐'];
 const visitedSections = new Set();
 
-// ── NAVIGATION ──
+// ── HISTORY-BACKED NAVIGATION ──
+// Every view change is a real history entry (pushState), so the on-screen
+// Back button, the Android hardware/gesture back button (Capacitor's WebView
+// steps back through its own history by default — no extra plugin needed),
+// and the browser's own back button on the website all just work.
+let suppressHistoryPush = false;
+
+function navState(view) { return { mesView: view }; }
+
 function showSection(index) {
+  if (!suppressHistoryPush) history.pushState(navState(index), '');
+
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  
+
   document.getElementById('sec-' + index).classList.add('active');
-  const navItems = document.querySelectorAll('.nav-item');
+  const navItems = document.querySelectorAll('.nav-item:not(.nav-item-home)');
   navItems[index].classList.add('active');
-  
+
   document.getElementById('topbarTitle').textContent = sectionTitles[index];
-  
+  document.getElementById('topbarSectionControls').style.display = '';
+
   currentSection = index;
   visitedSections.add(index);
-  
+
   // Update progress
   const progress = Math.round((visitedSections.size / totalSections) * 100);
   document.getElementById('progressFill').style.width = progress + '%';
-  
+
   // Mark visited
   navItems[index].classList.add('done');
-  
+
   // Scroll to top
   document.getElementById('main').scrollTop = 0;
   window.scrollTo(0, 0);
@@ -21025,11 +21053,75 @@ function showSection(index) {
   if (window.innerWidth <= 900) closeSidebar();
 }
 
+function renderHome() {
+  if (!suppressHistoryPush) history.pushState(navState('home'), '');
+
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-home').classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item-home').classList.add('active');
+
+  document.getElementById('topbarTitle').textContent = 'Home';
+  document.getElementById('topbarSectionControls').style.display = 'none';
+
+  currentSection = null;
+  buildHomeCards();
+
+  document.getElementById('main').scrollTop = 0;
+  window.scrollTo(0, 0);
+
+  if (window.innerWidth <= 900) closeSidebar();
+}
+
+function goHome() {
+  if (currentSection === null) return;
+  renderHome();
+}
+function goBack() {
+  history.back();
+}
+
+window.addEventListener('popstate', (e) => {
+  const view = e.state ? e.state.mesView : 'home';
+  suppressHistoryPush = true;
+  if (view === 'home') renderHome();
+  else showSection(view);
+  suppressHistoryPush = false;
+});
+
+function buildHomeCards() {
+  const grid = document.getElementById('homeGrid');
+  if (grid.dataset.built === '1' && grid.dataset.visited === visitedSections.size + '') return;
+  grid.innerHTML = '';
+  for (let i = 0; i < totalSections; i++) {
+    const src = document.getElementById('sec-' + i).querySelector('.section-header');
+    const tag = src.querySelector('.section-tag').textContent.replace(/^\/\/\s*/, '');
+    const title = src.querySelector('.section-title').textContent;
+    const desc = src.querySelector('.section-desc').textContent;
+    const done = visitedSections.has(i);
+    const card = document.createElement('div');
+    card.className = 'home-card' + (done ? ' done' : '');
+    card.onclick = () => showSection(i);
+    card.innerHTML =
+      '<div class="home-card-icon">' + HOME_ICONS[i] + '</div>' +
+      '<div class="home-card-body">' +
+        '<div class="home-card-tag">' + tag + (done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
+        '<div class="home-card-title">' + title + '</div>' +
+        '<div class="home-card-desc">' + desc + '</div>' +
+      '</div>' +
+      '<div class="home-card-arrow">→</div>';
+    grid.appendChild(card);
+  }
+  grid.dataset.built = '1';
+  grid.dataset.visited = visitedSections.size + '';
+}
+
 function nextSection() {
-  if (currentSection < totalSections - 1) showSection(currentSection + 1);
+  if (currentSection !== null && currentSection < totalSections - 1) showSection(currentSection + 1);
 }
 function prevSection() {
-  if (currentSection > 0) showSection(currentSection - 1);
+  if (currentSection !== null && currentSection > 0) showSection(currentSection - 1);
 }
 
 // ── COLLAPSIBLE MENU ──
@@ -21182,10 +21274,10 @@ function sendQuick(text) {
 
 function askAiAboutCurrentSection() {
   const originalIndex = currentSection;
-  const title = sectionTitles[originalIndex] || '';
+  const title = originalIndex !== null ? sectionTitles[originalIndex] : '';
   showSection(7);
   const input = document.getElementById('ai-input');
-  if (originalIndex !== 7) {
+  if (originalIndex !== null && originalIndex !== 7) {
     input.value = 'I have a doubt about "' + title.replace(/^\d+\s*—\s*/, '') + '" — can you explain it and give me an interview-ready way to talk about it?';
   }
   input.focus();
@@ -21200,8 +21292,11 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── INIT ──
-visitedSections.add(0);
-document.getElementById('progressFill').style.width = Math.round((1/totalSections)*100) + '%';
+// Establishes the root history entry so the very first Back press has
+// somewhere sane to land instead of leaving the app.
+history.replaceState(navState('home'), '');
+buildHomeCards();
+document.getElementById('progressFill').style.width = Math.round((visitedSections.size/totalSections)*100) + '%';
 </script>
 <script src="assets/quiz-data.js"></script>
 <script src="assets/enhance.js"></script>

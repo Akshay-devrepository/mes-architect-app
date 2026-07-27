@@ -26,7 +26,7 @@ Push to `main` — the `deploy-pages.yml` workflow publishes `www/` to GitHub Pa
 
 ## Build the Android APK
 
-**Automatically (recommended):** push to `main`, or go to **Actions → Build Android APK → Run workflow**. The signed-debug APK is uploaded as a build artifact and attached to a GitHub Release tagged `apk-<run number>`.
+**Automatically (recommended):** push to `main`, or go to **Actions → Build Android APK → Run workflow**. The debug APK is renamed to `MES-Architect.apk` (a stable filename, so the "latest release" download link never changes), uploaded as a build artifact, and attached to a GitHub Release tagged `apk-<run number>`.
 
 **Locally** (requires Android Studio / JDK 17 + Android SDK installed):
 

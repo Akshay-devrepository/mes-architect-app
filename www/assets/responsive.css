@@ -42,8 +42,8 @@
   body.sidebar-toggled #main { margin-left: 0; }
 }
 
-/* ── HAMBURGER BUTTON ── */
-.topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+/* ── HAMBURGER + BACK/HOME BUTTONS ── */
+.topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .topbar-left > div { min-width: 0; }
 #menuToggleBtn {
   flex-shrink: 0;
@@ -59,6 +59,7 @@
   justify-content: center;
   gap: 4px;
   padding: 0;
+  margin-right: 6px;
 }
 #menuToggleBtn:hover { border-color: var(--amber); }
 #menuToggleBtn span {
@@ -70,6 +71,29 @@
   transition: background 0.2s;
 }
 #menuToggleBtn:hover span { background: var(--amber); }
+
+.nav-icon-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.nav-icon-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+@media (max-width: 480px) {
+  .topbar-left { gap: 6px; }
+  #menuToggleBtn, .nav-icon-btn { width: 30px; height: 30px; margin-right: 0; }
+}
 
 /* ── TOPBAR ── */
 .topbar { padding: 10px 16px; gap: 10px; }
@@ -84,7 +108,7 @@
 @media (max-width: 700px) {
   .topbar { padding: 10px 12px; }
   .topbar-breadcrumb { display: none; }
-  .topbar-section { font-size: 12px; max-width: 42vw; }
+  .topbar-section { max-width: 42vw; }
   .btn-sm { padding: 6px 10px; }
 }
 
@@ -98,9 +122,54 @@
   #sidebar { width: 88vw; min-width: 0; }
 }
 
-/* ── SECTION LAYOUT / TYPOGRAPHY ── */
+/* ── OVERFLOW SAFETY NET ──
+   No text should ever clip off the edge of the screen:
+   - min-width:0 undoes the flex/grid default of "never shrink below my
+     content's natural width", which is the #1 cause of a text-bearing
+     flex/grid child silently overflowing its row on a narrow screen.
+   - overflow-wrap:anywhere lets a single unbreakable long token (a URL,
+     an acronym string, a long compound word) break instead of pushing
+     the layout wider than the viewport. Diagrams are exempted since
+     they're deliberately monospaced ASCII-art that scrolls horizontally
+     instead (see .tbl-scroll / .diagram overflow-x:auto). */
+.section *, #sidebar *, .topbar *, #ai-chat-box *, .home-card *, #updateBanner * {
+  min-width: 0;
+}
+.section *:not(.diagram):not(.diagram *),
+#sidebar *, .topbar *, #ai-chat-box .msg-bubble, .home-card * {
+  overflow-wrap: anywhere;
+}
+/* overflow-wrap inherits, so excluding .diagram from the rule above isn't
+   enough on its own — it still inherits "anywhere" from its parent and
+   would mangle the ASCII-art alignment. Reset it back explicitly. */
+.diagram, .diagram * {
+  overflow-wrap: normal;
+}
+/* Buttons/badges/icons need their intrinsic size back, not a shrunk box */
+.dd-icon, .home-card-icon, .home-card-arrow, .nav-dot, .star-btn,
+.btn-sm, .nav-icon-btn, #menuToggleBtn, .level-pill, .dd-tag {
+  min-width: max-content;
+}
+
+/* ── FLUID TYPOGRAPHY (scales continuously with viewport width instead
+     of jumping at fixed breakpoints) ── */
+body { font-size: clamp(12.5px, 3.4vw, 14px); }
+.section-title { font-size: clamp(19px, 5.5vw, 28px); }
+.section-desc { font-size: clamp(12px, 3.1vw, 14px); }
+.section-tag { font-size: clamp(9px, 2.3vw, 10px); }
+.dd-title { font-size: clamp(13px, 3.6vw, 15px); }
+.dd-summary-text { font-size: clamp(11.5px, 3vw, 13px); }
+.card-title { font-size: clamp(12.5px, 3.2vw, 14px); }
+.q-box .q-text { font-size: clamp(12px, 3vw, 13px); }
+.q-box .a-text { font-size: clamp(11px, 2.8vw, 12px); }
+.topbar-section { font-size: clamp(11px, 3vw, 13px); }
+.nav-item { font-size: clamp(11px, 2.6vw, 12px); }
+.sidebar-title { font-size: clamp(14px, 3.6vw, 16px); }
+.home-card-title { font-size: clamp(13px, 3.4vw, 15px); }
+.home-card-desc { font-size: clamp(11.5px, 2.9vw, 12.5px); }
+
+/* ── SECTION LAYOUT ── */
 .section { padding: 40px 40px 80px; }
-.section-title { font-size: clamp(20px, 4vw, 28px); }
 
 @media (max-width: 1024px) {
   .section { padding: 28px 24px 60px; }
@@ -108,8 +177,6 @@
 @media (max-width: 700px) {
   .section { padding: 20px 16px 56px; }
   .section-header { margin-bottom: 24px; padding-bottom: 16px; }
-  .section-desc { font-size: 13px; }
-  body { font-size: 13px; }
 }
 @media (max-width: 480px) {
   .section { padding: 16px 12px 56px; }
@@ -134,8 +201,6 @@
 @media (max-width: 700px) {
   .dd-header { padding: 14px 16px; padding-right: 44px; gap: 10px; }
   .dd-icon { width: 30px; height: 30px; font-size: 14px; }
-  .dd-title { font-size: 14px; }
-  .dd-summary-text { font-size: 12.5px; }
   .dd-body-inner { padding: 18px 16px; }
   .dd-btn-row { padding: 0 16px 12px; flex-wrap: wrap; }
   .q-box { padding: 12px 14px; }

@@ -33,7 +33,7 @@ jobs:
           {
             "versionCode": $VERSION_CODE,
             "versionName": "$VERSION_NAME",
-            "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/latest/download/MES-Architect.apk"
           }
           EOF
 

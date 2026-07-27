@@ -295,3 +295,88 @@
 #updateCheckLink:hover { color: var(--amber); }
 #updateCheckStatus { color: var(--cyan); margin-left: 4px; }
 #updateCheckVersion { color: var(--text-muted); opacity: 0.6; margin-top: 3px; }
+
+/* ── HOME NAV ITEM (sidebar) ── */
+.nav-item-home {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+  padding-bottom: 12px;
+}
+.nav-item-home.active { color: var(--amber); }
+
+/* ── HOME GRID / CARDS ── */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.home-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, background 0.2s;
+  min-width: 0;
+}
+.home-card:hover {
+  border-color: var(--amber2);
+  transform: translateY(-2px);
+  background: var(--surface2);
+}
+.home-card.done { border-left: 3px solid var(--green); }
+.home-card-icon {
+  font-size: 26px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--surface2);
+}
+.home-card-body { flex: 1; min-width: 0; }
+.home-card-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+.home-card-done { color: var(--green); margin-left: 4px; }
+.home-card-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.home-card-desc {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.home-card-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 16px;
+  transition: transform 0.2s, color 0.2s;
+}
+.home-card:hover .home-card-arrow { transform: translateX(3px); color: var(--amber); }
+
+@media (max-width: 700px) {
+  .home-grid { grid-template-columns: 1fr; gap: 12px; }
+  .home-card { padding: 14px; gap: 12px; }
+  .home-card-icon { width: 34px; height: 34px; font-size: 20px; }
+  .home-card-title { font-size: 13.5px; }
+  .home-card-desc { font-size: 12px; }
+}

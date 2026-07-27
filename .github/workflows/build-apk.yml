@@ -49,16 +49,22 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
 
+      - name: Rename to a branded, stable filename
+        # Stable (no version number in the name) so version.json's apkUrl —
+        # ".../releases/latest/download/MES-Architect.apk" — never changes
+        # between builds; only the release it points to does.
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk MES-Architect.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mes-architect-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: MES-Architect-debug-apk
+          path: MES-Architect.apk
 
       - name: Attach APK to a release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-${{ github.run_number }}
-          name: Android build ${{ github.run_number }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          name: MES Architect — build ${{ github.run_number }}
+          files: MES-Architect.apk
           body: Auto-built debug APK from commit ${{ github.sha }}.
