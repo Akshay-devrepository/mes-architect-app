@@ -103,7 +103,14 @@ during development), for free at low volume.
    requests/day, 100 active licensed users).
 2. Create one Policy (any name — e.g. "Standard"). You only need one; which
    module(s) a license unlocks is stored on the *license* itself, not the
-   policy.
+   policy. Set these attributes on it (needed for the activation limit
+   below — see "Limiting activations per key" if you skip this for now):
+   - `authenticationStrategy`: `LICENSE` (lets a license key itself
+     authenticate the activation request — required, not just for limits)
+   - `floating`: `true`, `maxMachines`: `2` (or whatever cap you want)
+   - `strict`: `true` (the limit is silently **not enforced** without this)
+   - `overageStrategy`: `NO_OVERAGE` (this is the default — just don't
+     change it to one of the "allow overage" options)
 3. For each sale, create a License under that policy and set its
    `metadata.unlockKey` to the matching key from `LICENSE-KEYS-SECRET.md`
    (a single module's key for an individual sale, the bundle key for a
@@ -124,6 +131,25 @@ blank, or Keygen can't be reached, or the input isn't a Keygen key at all,
 the app transparently falls back to treating the input as a raw passphrase
 — so this is safe to leave unconfigured, and safe to adopt later without
 re-encrypting anything.
+
+### Limiting activations per key
+
+With the policy attributes above set, entering a key on a device calls
+Keygen's machine-activation endpoint the first time (using the license key
+itself as auth — no admin token involved), which Keygen accepts or rejects
+based on the policy's `maxMachines`. A rejection (limit reached) shows
+Keygen's own error message instead of unlocking. After a device's first
+successful activation, later key entries on that *same* device (e.g.
+applying the bundle key to a second module) skip straight to validation —
+they never spend another activation slot.
+
+One honest limitation: there's no stable hardware ID available from a
+browser/WebView without adding a native plugin, so "one device" here means
+"one browser profile / one app install," identified by a random id stored
+in localStorage. Clearing site data, using a different browser, or
+reinstalling the app looks like a new device to Keygen and uses another
+activation slot — there's no way around that without native device
+fingerprinting, which isn't currently wired in.
 
 ### Setting up sales (Gumroad / LemonSqueezy)
 

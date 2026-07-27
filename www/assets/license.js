@@ -55,10 +55,76 @@ const KEYGEN_ERROR_MESSAGES = {
   FRAUD: 'This license key was flagged and is no longer valid.'
 };
 
-// Returns { ok: true, unlockKey } on a valid Keygen license, { ok: false, message }
-// on a definitive Keygen rejection (expired/suspended/etc — don't fall back),
-// or null if Keygen wasn't reachable / configured / didn't recognize the key
-// at all (caller should fall back to trying it as a raw AES passphrase).
+// ── Device activation limit ──
+// Enforced by Keygen's own policy settings (maxMachines + strict mode), not
+// by anything in this file — see README "Limiting activations per key".
+// This device gets a random, locally-stored id the first time a Keygen key
+// is entered (there's no stable hardware fingerprint available from a
+// browser/WebView without a native plugin, so clearing site data or
+// reinstalling the app looks like "a new device" and uses another
+// activation slot — documented, not hidden). Activation itself only
+// happens once per device: after that this flag skips straight to
+// validate-only for every later key entry, so applying multiple module
+// keys on an already-activated device never risks tripping the limit.
+const DEVICE_FINGERPRINT_KEY = 'mes_device_fingerprint_v1';
+const KEYGEN_ACTIVATED_FLAG_KEY = 'mes_keygen_activated_v1';
+
+function getDeviceFingerprint() {
+  let fp = localStorage.getItem(DEVICE_FINGERPRINT_KEY);
+  if (fp) return fp;
+  if (window.crypto && crypto.randomUUID) {
+    fp = 'dev-' + crypto.randomUUID();
+  } else {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    fp = 'dev-' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  localStorage.setItem(DEVICE_FINGERPRINT_KEY, fp);
+  return fp;
+}
+
+// Activates this device as a "machine" against the license (once per
+// device — see comment above). Returns { ok: true } on success, or
+// { ok: false, message } — most importantly when the policy's machine
+// limit is already used up, in which case Keygen rejects the activation
+// and that message is passed straight through to the user.
+async function ensureMachineActivated(key, licenseId) {
+  if (localStorage.getItem(KEYGEN_ACTIVATED_FLAG_KEY) === '1') return { ok: true };
+  let res;
+  try {
+    res = await fetch('https://api.keygen.sh/v1/accounts/' + KEYGEN_ACCOUNT_ID + '/machines', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json',
+        'Authorization': 'License ' + key
+      },
+      body: JSON.stringify({
+        data: {
+          type: 'machines',
+          attributes: { fingerprint: getDeviceFingerprint(), platform: (navigator.platform || 'web') },
+          relationships: { license: { data: { type: 'licenses', id: licenseId } } }
+        }
+      })
+    });
+  } catch (e) {
+    return { ok: false, message: 'Could not reach the license server to activate this device — check your connection and try again.' };
+  }
+  if (res.status === 201) {
+    localStorage.setItem(KEYGEN_ACTIVATED_FLAG_KEY, '1');
+    return { ok: true };
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) {}
+  const detail = body && body.errors && body.errors[0] && (body.errors[0].detail || body.errors[0].title);
+  return { ok: false, message: detail || 'This license key has already been activated on its device limit.' };
+}
+
+// Returns { ok: true, unlockKey } on a valid Keygen license that this
+// device successfully activated against, { ok: false, message } on a
+// definitive Keygen rejection (expired/suspended/device limit/etc — don't
+// fall back), or null if Keygen wasn't reachable / configured / didn't
+// recognize the key at all (caller should fall back to a raw passphrase).
 async function validateKeygenLicense(key) {
   if (!KEYGEN_ACCOUNT_ID) return null;
   let res;
@@ -75,14 +141,22 @@ async function validateKeygenLicense(key) {
   try { body = await res.json(); } catch (e) { return null; }
 
   const code = body && body.meta && body.meta.code;
-  if (body && body.meta && body.meta.valid) {
-    const unlockKey = body.data && body.data.attributes && body.data.attributes.metadata &&
-      body.data.attributes.metadata.unlockKey;
-    if (unlockKey) return { ok: true, unlockKey };
+  if (!(body && body.meta && body.meta.valid)) {
+    if (code === 'NOT_FOUND' || !code) return null; // not a Keygen key we recognize — try raw-passphrase
+    return { ok: false, message: KEYGEN_ERROR_MESSAGES[code] || ('This license key isn’t valid (' + code + ').') };
+  }
+
+  const licenseId = body.data && body.data.id;
+  const unlockKey = body.data && body.data.attributes && body.data.attributes.metadata &&
+    body.data.attributes.metadata.unlockKey;
+  if (!unlockKey || !licenseId) {
     return { ok: false, message: 'This license key is valid but isn’t configured to unlock anything — contact the seller.' };
   }
-  if (code === 'NOT_FOUND' || !code) return null; // not a Keygen key we recognize — try raw-passphrase
-  return { ok: false, message: KEYGEN_ERROR_MESSAGES[code] || ('This license key isn’t valid (' + code + ').') };
+
+  const activation = await ensureMachineActivated(key, licenseId);
+  if (!activation.ok) return { ok: false, message: activation.message };
+
+  return { ok: true, unlockKey };
 }
 
 // Resolves whatever the user typed into the actual AES passphrase to try:
