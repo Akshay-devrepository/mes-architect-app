@@ -11,6 +11,12 @@
   transition: transform 0.28s ease;
 }
 #main {
+  /* The single flex-flow child of <body> (the sidebar is position:fixed,
+     out of flow) — without min-width:0 here, a wide child anywhere inside
+     (e.g. a <pre> ASCII diagram, which needs to be wide) stretches THIS
+     box instead of scrolling internally, which is what caused the
+     whole-page horizontal scroll. This is the actual fix for that. */
+  min-width: 0;
   transition: margin-left 0.28s ease;
 }
 #sidebarBackdrop {
@@ -244,3 +250,31 @@ body { font-size: clamp(12.5px, 3.4vw, 14px); }
 
 /* ── MISC SAFETY NETS ── */
 img, svg, video, iframe { max-width: 100%; }
+
+/* ── SAFE-AREA INSETS (status bar / notch / gesture nav bar) ──
+   Placed last on purpose: several rules above set `padding` as a shorthand
+   (which resets all four sides), so a longhand padding-top/-bottom earlier
+   in the file would get silently clobbered. Being last guarantees these win.
+
+   Android 15+ (targetSdk 35+, which this app builds against) enforces
+   edge-to-edge rendering at the OS level — the WebView draws behind the
+   status bar and gesture nav bar no matter what the native theme says.
+   The only reliable fix is to pad for it in CSS via env(safe-area-inset-*),
+   which the "viewport-fit=cover" meta tag (already set in <head>) unlocks.
+   Resolves to 0 harmlessly on desktop browsers/the plain website, so this
+   never affects non-native layout. */
+.topbar {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+.sidebar-header {
+  padding-top: max(24px, env(safe-area-inset-top));
+}
+.sidebar-footer {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+#askAiFab {
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
+}
+#updateBanner {
+  padding-bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+}
