@@ -7,7 +7,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **16 concept modules** — ISA-95, ISA-88, MES functional modules, enterprise architecture, cloud migration, database design, implementation lifecycle, industry-specific MES, AI in manufacturing, and more.
 - **★ Bookmarks** — star any concept card or interview question; revisit them all from the **Saved** tab.
 - **Quiz Mode** — every "Show Consultant Answer" question on the board, plus a hand-written set of calculation drills, acronym checks, and compare/contrast cards, turned into a flip-card deck. Rate yourself after each card; unmastered ones resurface until you get them.
-- **AI doubt-solver** — an "Ask AI" chat (and a floating quick-launch button from any page) powered by [Puter.js](https://developer.puter.com/), which gives free access to Claude/GPT models client-side with **no API key required**.
+- **AI doubt-solver** — a global "Ask AI" chat overlay (floating button, reachable from Home, any module — locked or unlocked — Quiz, or Saved) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
 - **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
 - **Licensed modules** — module 1 is a free trial; modules 2–16 are encrypted and unlock with a license key, sold per-module or as a full bundle. See "Selling licensed access" below.
@@ -213,9 +213,49 @@ resources/            master icon/splash source images (used by `capacitor-asset
 LICENSE-KEYS-SECRET.md  the actual keys — gitignored, exists only after you run the script locally
 ```
 
-## Notes on the AI chat
+## AI chat setup
 
-Puter.js needs no signup or API key, but the **first time** you use it in a fresh browser or on a new device, it may open a small popup asking you to continue as a guest — allow popups for the site once and it won't ask again. There's no cost and nothing to configure.
+The chat used to run on Puter.js, which requires a popup-based sign-in flow —
+this reliably broke inside the Android app's WebView (the popup would open
+but never complete the auth handoff back to the app). It's been replaced
+with [Groq](https://console.groq.com/), which needs no sign-in or
+confirmation from the end user at all, and was confirmed reachable directly
+from the browser (CORS-enabled, no backend needed) during development.
+
+1. Sign up free at [console.groq.com](https://console.groq.com/) (no credit
+   card). Create an API key.
+2. Paste it into `GROQ_API_KEY` near the top of the "AI CHAT" section in
+   `www/index.html`'s inline script, then redeploy.
+3. That's it — no further setup, and end users never see any sign-in
+   prompt. Free tier is generous (30 requests/minute, 14,400/day at time of
+   writing) — plenty for this use case.
+
+**Heads up on embedding a key client-side:** since this is a static
+app with no backend, the key lives in the shipped JS and is visible to
+anyone who inspects the app. Groq's free tier has no billing exposure (there's
+nothing to overspend), so the realistic risk is someone else quietly using
+your daily quota, not a bill — acceptable for an app at this scale, but
+worth knowing.
+
+### Keeping the AI on-topic
+
+Two layers, per the brief this was built to:
+1. **Client-side keyword filter** (`MANUFACTURING_KEYWORDS` /
+   `isManufacturingQuery()`, right above `GROQ_API_KEY`) — a cheap
+   substring check that skips the network call entirely for obviously
+   off-topic questions, replying with the fixed refusal message. Extend the
+   keyword list as you add more modules/vendors/protocols.
+2. **System prompt** — a second, more precise pass: even a question that
+   slips past the keyword filter (e.g. "quality of life", which matches on
+   "quality") gets refused by the model itself if it isn't really about
+   manufacturing, per the strict scope rules baked into the prompt.
+
+Note that module 8 ("AI Interview Coach")'s *written* content (question
+banks, coaching frameworks) is still one of the paid modules — only the
+interactive chat itself is free and global. It used to be embedded inside
+that module's body, which meant it was accidentally paywalled too; it's now
+a standalone overlay outside every `.section`, so re-running
+`scripts/encrypt-modules.js` never touches it.
 
 ## Adding new content or quiz cards
 
