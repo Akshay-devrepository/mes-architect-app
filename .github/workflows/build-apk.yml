@@ -40,6 +40,16 @@ jobs:
           window.APP_VERSION_NAME = "$VERSION_NAME";
           EOF
 
+      - name: Inject Groq API key (repo secret — never committed to source)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          if [ -n "$GROQ_API_KEY" ]; then
+            sed -i "s#__GROQ_API_KEY__#$GROQ_API_KEY#" www/index.html
+          else
+            echo "::warning::GROQ_API_KEY secret not set — AI chat will show its 'not configured' message."
+          fi
+
       - name: Sync Capacitor web assets
         run: npx cap sync android
 

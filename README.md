@@ -7,7 +7,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **16 concept modules** — ISA-95, ISA-88, MES functional modules, enterprise architecture, cloud migration, database design, implementation lifecycle, industry-specific MES, AI in manufacturing, and more.
 - **★ Bookmarks** — star any concept card or interview question; revisit them all from the **Saved** tab.
 - **Quiz Mode** — every "Show Consultant Answer" question on the board, plus a hand-written set of calculation drills, acronym checks, and compare/contrast cards, turned into a flip-card deck. Rate yourself after each card; unmastered ones resurface until you get them.
-- **AI doubt-solver** — a global "Ask AI" chat overlay (floating button, reachable from Home, any module — locked or unlocked — Quiz, or Saved) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below.
+- **AI doubt-solver** — an interactive chat coach built into Module 8 ("AI Interview Coach," a paid module) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free to run with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below. The floating "ASK AI" button jumps straight there, showing the license gate if it isn't unlocked yet.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
 - **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
 - **Licensed modules** — module 1 is a free trial; modules 2–16 are encrypted and unlock with a license key, sold per-module or as a full bundle. See "Selling licensed access" below.
@@ -224,18 +224,30 @@ from the browser (CORS-enabled, no backend needed) during development.
 
 1. Sign up free at [console.groq.com](https://console.groq.com/) (no credit
    card). Create an API key.
-2. Paste it into `GROQ_API_KEY` near the top of the "AI CHAT" section in
-   `www/index.html`'s inline script, then redeploy.
-3. That's it — no further setup, and end users never see any sign-in
-   prompt. Free tier is generous (30 requests/minute, 14,400/day at time of
-   writing) — plenty for this use case.
+2. Add it as a **GitHub Actions secret** named `GROQ_API_KEY` — repo
+   **Settings → Secrets and variables → Actions → New repository secret**.
+   Do **not** paste it directly into `www/index.html` — that file has a
+   `__GROQ_API_KEY__` placeholder that both CI workflows substitute with
+   the real secret at build time, so the actual key only ever ends up in
+   the deployed Pages site / built APK, never in git history or the
+   repo itself. (GitHub's own push protection will reject a commit that
+   contains a real-looking key, which is exactly what caught this during
+   development — pasting it into the source directly doesn't work anyway.)
+3. Push (or re-run the workflows) and both builds pick it up automatically.
+   End users never see any sign-in prompt. Free tier is generous (30
+   requests/minute, 14,400/day at time of writing) — plenty for this use
+   case.
 
-**Heads up on embedding a key client-side:** since this is a static
-app with no backend, the key lives in the shipped JS and is visible to
-anyone who inspects the app. Groq's free tier has no billing exposure (there's
-nothing to overspend), so the realistic risk is someone else quietly using
-your daily quota, not a bill — acceptable for an app at this scale, but
-worth knowing.
+**Heads up on the key still being in the deployed output:** since this is a
+static app with no backend, the *built* site/APK does contain the real key
+in its JS, visible to anyone who inspects the deployed app (this part is
+unavoidable without a real backend — see "Selling licensed access" above
+for the same trade-off applied to content). The GitHub secret only solves
+the *worse* problem: bots constantly scan public repos for exactly this
+kind of leaked key and can abuse/trigger revocation within minutes — that
+risk is now closed off. Someone quietly using your daily quota from the
+deployed app is a much smaller, tolerable risk at this scale, and Groq's
+free tier has no billing exposure (nothing to overspend).
 
 ### Keeping the AI on-topic
 
@@ -250,12 +262,13 @@ Two layers, per the brief this was built to:
    "quality") gets refused by the model itself if it isn't really about
    manufacturing, per the strict scope rules baked into the prompt.
 
-Note that module 8 ("AI Interview Coach")'s *written* content (question
-banks, coaching frameworks) is still one of the paid modules — only the
-interactive chat itself is free and global. It used to be embedded inside
-that module's body, which meant it was accidentally paywalled too; it's now
-a standalone overlay outside every `.section`, so re-running
-`scripts/encrypt-modules.js` never touches it.
+The interactive chat itself lives inside Module 8 ("AI Interview Coach")
+and is part of that paid module, same as its written content (question
+banks, coaching frameworks) — the floating "ASK AI" button and sidebar/Home
+links to it all just navigate to Module 8, showing the license gate there
+if it isn't unlocked. (An earlier iteration pulled the chat out into a free
+global overlay reachable from anywhere; that was reverted — the chat is
+part of what Module 8 buyers pay for.)
 
 ## Adding new content or quiz cards
 
