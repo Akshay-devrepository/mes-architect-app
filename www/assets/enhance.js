@@ -396,6 +396,56 @@ function renderQuiz() {
 window.renderSaved = renderSaved;
 window.renderQuiz = renderQuiz;
 
+// ══════════════════════════════════════════
+// GLOSSARY — searches window.GLOSSARY_DATA (assets/glossary-data.js)
+// ══════════════════════════════════════════
+function renderGlossary() {
+  const root = document.getElementById('glossary-root');
+  if (!root) return;
+  const searchInput = document.getElementById('glossarySearch');
+  if (searchInput && !searchInput.dataset.wired) {
+    searchInput.addEventListener('input', () => renderGlossaryList(searchInput.value));
+    searchInput.dataset.wired = '1';
+  }
+  renderGlossaryList(searchInput ? searchInput.value : '');
+}
+
+function renderGlossaryList(query) {
+  const root = document.getElementById('glossary-root');
+  if (!root) return;
+  const terms = (window.GLOSSARY_DATA || []).slice().sort((a, b) => a.term.localeCompare(b.term));
+  const q = (query || '').trim().toLowerCase();
+  const filtered = q
+    ? terms.filter((t) =>
+        t.term.toLowerCase().includes(q) ||
+        (t.expansion && t.expansion.toLowerCase().includes(q)) ||
+        t.definition.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q))
+    : terms;
+
+  if (filtered.length === 0) {
+    root.innerHTML = '<div class="glossary-empty">No terms match "' + escapeHtml(query) + '".</div>';
+    return;
+  }
+
+  root.innerHTML =
+    '<div class="glossary-count">' + filtered.length + ' of ' + terms.length + ' terms</div>' +
+    '<div class="glossary-grid">' +
+    filtered.map((t) =>
+      '<div class="glossary-card">' +
+        '<div class="glossary-card-top">' +
+          '<span class="glossary-term">' + escapeHtml(t.term) + '</span>' +
+          '<span class="glossary-category">' + escapeHtml(t.category) + '</span>' +
+        '</div>' +
+        (t.expansion ? '<div class="glossary-expansion">' + escapeHtml(t.expansion) + '</div>' : '') +
+        '<div class="glossary-definition">' + escapeHtml(t.definition) + '</div>' +
+      '</div>'
+    ).join('') +
+    '</div>';
+}
+
+window.renderGlossary = renderGlossary;
+
 // ── Wrap every table so a wide one scrolls inside itself on small
 //    screens instead of forcing the whole page to scroll sideways ──
 function wrapTables() {

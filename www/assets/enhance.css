@@ -551,3 +551,86 @@
 }
 .home-card-buy:hover { background: var(--amber2); color: #0b0f1a; }
 
+/* ── GLOSSARY ── */
+.glossary-search {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 11px 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+  margin-bottom: 20px;
+}
+.glossary-search:focus { border-color: var(--amber); }
+.glossary-search::placeholder { color: var(--text-muted); }
+
+.glossary-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.glossary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+}
+.glossary-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.glossary-term {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--amber);
+}
+.glossary-category {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+.glossary-expansion {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--cyan);
+  margin-bottom: 8px;
+}
+.glossary-definition {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+.glossary-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+@media (max-width: 700px) {
+  .glossary-grid { grid-template-columns: 1fr; }
+  .glossary-card { padding: 14px; }
+}
+

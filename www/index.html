@@ -1360,36 +1360,37 @@ code {
   <div class="nav-item nav-item-home active" onclick="goHome()">⌂ Home</div>
 
   <div class="nav-section-label">Core Framework</div>
-  <div class="nav-item" onclick="showSection(0)"><span class="nav-num">01</span> MES Industry Overview<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(1)"><span class="nav-num">02</span> ISA-95 Deep Dive<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(2)"><span class="nav-num">03</span> ISA-88 Batch Control<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(3)"><span class="nav-num">04</span> MES Functional Modules<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="0" onclick="showSection(0)"><span class="nav-num">01</span> MES Industry Overview<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="1" onclick="showSection(1)"><span class="nav-num">02</span> ISA-95 Deep Dive<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="2" onclick="showSection(2)"><span class="nav-num">03</span> ISA-88 Batch Control<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="3" onclick="showSection(3)"><span class="nav-num">04</span> MES Functional Modules<span class="nav-dot"></span></div>
   
   <div class="nav-section-label">Architecture</div>
-  <div class="nav-item" onclick="showSection(4)"><span class="nav-num">05</span> Enterprise Architecture<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(5)"><span class="nav-num">06</span> Cloud Migration<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(6)"><span class="nav-num">07</span> Database & Data Models<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="4" onclick="showSection(4)"><span class="nav-num">05</span> Enterprise Architecture<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="5" onclick="showSection(5)"><span class="nav-num">06</span> Cloud Migration<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="6" onclick="showSection(6)"><span class="nav-num">07</span> Database & Data Models<span class="nav-dot"></span></div>
 
   <div class="nav-section-label">Consulting</div>
-  <div class="nav-item" onclick="showSection(7)"><span class="nav-num">08</span> AI Interview Coach<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(8)"><span class="nav-num">09</span> Implementation Lifecycle<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(9)"><span class="nav-num">10</span> Industry-Specific MES<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="7" onclick="showSection(7)"><span class="nav-num">08</span> AI Interview Coach<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="8" onclick="showSection(8)"><span class="nav-num">09</span> Implementation Lifecycle<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="9" onclick="showSection(9)"><span class="nav-num">10</span> Industry-Specific MES<span class="nav-dot"></span></div>
 
   <div class="nav-section-label">Mastery</div>
-  <div class="nav-item" onclick="showSection(10)"><span class="nav-num">11</span> Learning Roadmap<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(11)"><span class="nav-num">12</span> Concept Visualizations<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(12)"><span class="nav-num">13</span> Consultant Mindset<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(13)"><span class="nav-num">14</span> Advanced Topics (UNS/AI)<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="10" onclick="showSection(10)"><span class="nav-num">11</span> Learning Roadmap<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="11" onclick="showSection(11)"><span class="nav-num">12</span> Concept Visualizations<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="12" onclick="showSection(12)"><span class="nav-num">13</span> Consultant Mindset<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="13" onclick="showSection(13)"><span class="nav-num">14</span> Advanced Topics (UNS/AI)<span class="nav-dot"></span></div>
 
   <div class="nav-section-label">★ Integration Hub</div>
-  <div class="nav-item" onclick="showSection(14)" style="border-left:3px solid rgba(34,211,238,0.3);"><span class="nav-num" style="color:var(--cyan);">15</span> <span style="color:var(--cyan);font-weight:600;">MES Integration Deep Dive</span><span class="nav-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan);"></span></div>
+  <div class="nav-item" data-idx="14" onclick="showSection(14)" style="border-left:3px solid rgba(34,211,238,0.3);"><span class="nav-num" style="color:var(--cyan);">15</span> <span style="color:var(--cyan);font-weight:600;">MES Integration Deep Dive</span><span class="nav-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan);"></span></div>
 
   <div class="nav-section-label">★ AI Deep Dive</div>
-  <div class="nav-item" onclick="showSection(15)" style="border-left:3px solid rgba(167,139,250,0.3);"><span class="nav-num" style="color:var(--purple);">16</span> <span style="color:var(--purple);font-weight:600;">AI in Manufacturing</span><span class="nav-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></span></div>
+  <div class="nav-item" data-idx="15" onclick="showSection(15)" style="border-left:3px solid rgba(167,139,250,0.3);"><span class="nav-num" style="color:var(--purple);">16</span> <span style="color:var(--purple);font-weight:600;">AI in Manufacturing</span><span class="nav-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></span></div>
 
   <div class="nav-section-label">Practice</div>
-  <div class="nav-item" onclick="showSection(16)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">17</span> Quiz Mode<span class="nav-dot"></span></div>
-  <div class="nav-item" onclick="showSection(17)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">18</span> ★ Saved<span class="nav-dot" id="savedCountDot" style="background:transparent;width:auto;height:auto;border-radius:0;font-family:var(--mono);font-size:9px;color:var(--amber);"></span></div>
+  <div class="nav-item" data-idx="16" onclick="showSection(16)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">17</span> Quiz Mode<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="18" onclick="showSection(18)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">19</span> 📖 Glossary<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="17" onclick="showSection(17)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">18</span> ★ Saved<span class="nav-dot" id="savedCountDot" style="background:transparent;width:auto;height:auto;border-radius:0;font-family:var(--mono);font-size:9px;color:var(--amber);"></span></div>
 
   <div class="sidebar-footer" id="sidebarFooter">
     <div class="level-badge">▲ ARCHITECT TRACK</div>
@@ -2122,12 +2123,25 @@ Process Design   Resource Plan  OEE Actuals       Spare Parts
   <div id="saved-root"></div>
 </div><!-- end sec-17 -->
 
+<!-- ══════════════════════════════════════════
+     SECTION 19: GLOSSARY
+══════════════════════════════════════════ -->
+<div class="section" id="sec-18">
+  <div class="section-header">
+    <div class="section-tag">// REFERENCE · QUICK LOOKUP</div>
+    <div class="section-title">📖 Glossary</div>
+    <div class="section-desc">Every acronym and term used across the board, in one searchable place — handy for a last-minute refresher before an interview.</div>
+  </div>
+  <input type="text" id="glossarySearch" class="glossary-search" placeholder="Search terms or definitions… (e.g. &quot;OEE&quot;, &quot;traceability&quot;)" autocomplete="off">
+  <div id="glossary-root"></div>
+</div><!-- end sec-18 -->
+
 </main><!-- end #main -->
 
 <script>
 // ── STATE ──
 let currentSection = null; // null while on Home
-const totalSections = 18;
+const totalSections = 19;
 const sectionTitles = [
   '01 — MES Industry Overview',
   '02 — ISA-95 Deep Dive',
@@ -2146,9 +2160,10 @@ const sectionTitles = [
   '15 — MES Integration Deep Dive',
   '16 — AI in Manufacturing',
   '17 — Quiz Mode',
-  '18 — ★ Saved'
+  '18 — ★ Saved',
+  '19 — Glossary'
 ];
-const HOME_ICONS = ['🏭','📐','⚗️','🧩','🏛️','☁️','🗄️','🎯','🚀','🏗️','🗺️','🧠','🎓','⚡','🔗','🤖','🃏','⭐'];
+const HOME_ICONS = ['🏭','📐','⚗️','🧩','🏛️','☁️','🗄️','🎯','🚀','🏗️','🗺️','🧠','🎓','⚡','🔗','🤖','🃏','⭐','📖'];
 const visitedSections = new Set();
 
 // ── HISTORY-BACKED NAVIGATION ──
@@ -2167,8 +2182,10 @@ function showSection(index) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
   document.getElementById('sec-' + index).classList.add('active');
-  const navItems = document.querySelectorAll('.nav-item:not(.nav-item-home)');
-  navItems[index].classList.add('active');
+  // Looked up by data-idx, not DOM position — nav-items can be reordered
+  // in the sidebar (e.g. Glossary sits before Saved) without their index
+  // still having to match their visual position in the list.
+  const navItem = document.querySelector('.nav-item[data-idx="' + index + '"]');
 
   document.getElementById('topbarTitle').textContent = sectionTitles[index];
   document.getElementById('topbarSectionControls').style.display = '';
@@ -2180,8 +2197,10 @@ function showSection(index) {
   const progress = Math.round((visitedSections.size / totalSections) * 100);
   document.getElementById('progressFill').style.width = progress + '%';
 
-  // Mark visited
-  navItems[index].classList.add('done');
+  if (navItem) {
+    navItem.classList.add('active');
+    navItem.classList.add('done');
+  }
 
   // Scroll to top
   document.getElementById('main').scrollTop = 0;
@@ -2189,6 +2208,7 @@ function showSection(index) {
 
   if (index === 16 && window.renderQuiz) window.renderQuiz();
   if (index === 17 && window.renderSaved) window.renderSaved();
+  if (index === 18 && window.renderGlossary) window.renderGlossary();
 
   // On phones/small tablets, picking a topic should close the drawer menu
   if (window.innerWidth <= 900) closeSidebar();
@@ -2558,6 +2578,7 @@ buildHomeCards();
 document.getElementById('progressFill').style.width = Math.round((visitedSections.size/totalSections)*100) + '%';
 </script>
 <script src="assets/quiz-data.js"></script>
+<script src="assets/glossary-data.js"></script>
 <script src="assets/enhance.js"></script>
 <script src="assets/license.js"></script>
 <script src="assets/build-version.js"></script>
