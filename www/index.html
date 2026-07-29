@@ -1412,10 +1412,24 @@ code {
         <div class="topbar-section" id="topbarTitle">Home</div>
       </div>
     </div>
+    <button id="searchToggleBtn" class="nav-icon-btn" onclick="openSearchPanel()" title="Search" aria-label="Search">🔍</button>
     <div class="topbar-controls" id="topbarSectionControls" style="display:none">
       <button class="btn-sm" onclick="prevSection()">← <span class="btn-label">PREV</span></button>
       <button class="btn-sm" onclick="nextSection()"><span class="btn-label">NEXT</span> →</button>
     </div>
+  </div>
+
+  <!-- ══ GLOBAL SEARCH OVERLAY — not tied to any module, searches whatever
+       concept/question content is currently in the DOM (so it naturally
+       only covers unlocked modules) plus the Glossary. ══ -->
+  <div id="searchBackdrop" onclick="closeSearchPanel()"></div>
+  <div id="searchPanel">
+    <div class="search-panel-header">
+      <input type="text" id="searchInput" placeholder="Search concepts, questions, glossary…" autocomplete="off">
+      <button id="searchCloseBtn" onclick="closeSearchPanel()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div id="searchCoverage" class="search-coverage"></div>
+    <div id="searchResults" class="search-results"></div>
   </div>
 
 <!-- ══════════════════════════════════════════
@@ -2561,11 +2575,17 @@ function askAiAboutCurrentSection() {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeSidebar();
+    closeSearchPanel();
     const box = document.getElementById('ai-chat-box');
     if (box && box.classList.contains('maximized')) toggleAiChatSize();
     return;
   }
-  if (e.target.id === 'ai-input') return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    openSearchPanel();
+    return;
+  }
+  if (e.target.id === 'ai-input' || e.target.id === 'searchInput') return;
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSection();
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevSection();
 });

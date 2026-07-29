@@ -446,6 +446,129 @@ function renderGlossaryList(query) {
 
 window.renderGlossary = renderGlossary;
 
+// ══════════════════════════════════════════
+// GLOBAL SEARCH — searches whatever concept cards and questions are
+// currently in the DOM (so it naturally only covers the free module plus
+// whatever's been unlocked) and the Glossary, from one overlay reachable
+// anywhere via the topbar icon or Ctrl/Cmd+K.
+// ══════════════════════════════════════════
+const TOTAL_CONTENT_MODULES = 16;
+let searchResultsCache = [];
+let searchDebounceTimer = null;
+
+function openSearchPanel() {
+  document.body.classList.add('search-open');
+  updateSearchCoverage();
+  const input = document.getElementById('searchInput');
+  if (!input.dataset.wired) {
+    input.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => runSearch(input.value), 150);
+    });
+    input.dataset.wired = '1';
+  }
+  input.focus();
+  runSearch(input.value);
+}
+window.openSearchPanel = openSearchPanel;
+
+function closeSearchPanel() {
+  document.body.classList.remove('search-open');
+}
+window.closeSearchPanel = closeSearchPanel;
+
+function updateSearchCoverage() {
+  const lockedCount = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
+  const unlockedModules = TOTAL_CONTENT_MODULES - lockedCount;
+  const el = document.getElementById('searchCoverage');
+  if (!el) return;
+  el.textContent = lockedCount > 0
+    ? 'Searching ' + unlockedModules + ' of ' + TOTAL_CONTENT_MODULES + ' modules — unlock the rest to search their content too.'
+    : 'Searching all ' + TOTAL_CONTENT_MODULES + ' modules.';
+}
+
+function runSearch(query) {
+  const resultsEl = document.getElementById('searchResults');
+  if (!resultsEl) return;
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    resultsEl.innerHTML = '<div class="search-hint">Type to search concept cards, questions, and glossary terms. (Ctrl/Cmd+K opens this from anywhere.)</div>';
+    return;
+  }
+
+  const results = [];
+
+  document.querySelectorAll('.section .dd-wrap').forEach((wrap) => {
+    const titleEl = wrap.querySelector('.dd-title');
+    const summaryEl = wrap.querySelector('.dd-summary-text');
+    const titleText = titleEl ? titleEl.textContent.trim() : '';
+    const summaryText = summaryEl ? summaryEl.textContent.trim() : '';
+    if ((titleText + ' ' + summaryText).toLowerCase().includes(q)) {
+      results.push({ type: 'concept', title: titleText, snippet: truncate(summaryText, 140), section: sectionIndexOf(wrap), target: wrap });
+    }
+  });
+
+  document.querySelectorAll('.section .q-box').forEach((box) => {
+    const qEl = box.querySelector('.q-text');
+    const aEl = box.querySelector('.a-text');
+    const qStr = qEl ? qEl.textContent.trim() : '';
+    const aStr = aEl ? aEl.textContent.trim() : '';
+    if ((qStr + ' ' + aStr).toLowerCase().includes(q)) {
+      results.push({ type: 'question', title: qStr, snippet: truncate(aStr, 140), section: sectionIndexOf(box), target: box });
+    }
+  });
+
+  (window.GLOSSARY_DATA || []).forEach((t) => {
+    const hay = (t.term + ' ' + (t.expansion || '') + ' ' + t.definition + ' ' + t.category).toLowerCase();
+    if (hay.includes(q)) {
+      results.push({ type: 'glossary', title: t.term, snippet: truncate(t.definition, 140), glossaryTerm: t.term });
+    }
+  });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="search-hint">No matches for "' + escapeHtml(query) + '".</div>';
+    return;
+  }
+
+  searchResultsCache = results;
+  const shown = results.slice(0, 50);
+  resultsEl.innerHTML =
+    '<div class="search-count">' + results.length + ' result' + (results.length === 1 ? '' : 's') +
+      (results.length > 50 ? ' (showing first 50)' : '') + '</div>' +
+    shown.map((r, i) => {
+      const tag = r.type === 'glossary' ? 'Glossary' : (r.section !== null ? 'Module ' + (r.section + 1) : '');
+      return '<div class="search-result" data-idx="' + i + '">' +
+        '<div class="search-result-tag">' + escapeHtml(tag) + '</div>' +
+        '<div class="search-result-title">' + escapeHtml(r.title) + '</div>' +
+        '<div class="search-result-snippet">' + escapeHtml(r.snippet) + '</div>' +
+      '</div>';
+    }).join('');
+
+  resultsEl.querySelectorAll('.search-result').forEach((el) => {
+    el.addEventListener('click', () => {
+      const r = searchResultsCache[parseInt(el.dataset.idx, 10)];
+      closeSearchPanel();
+      if (r.type === 'glossary') {
+        showSection(18);
+        setTimeout(() => {
+          const gInput = document.getElementById('glossarySearch');
+          if (gInput) { gInput.value = r.glossaryTerm; gInput.dispatchEvent(new Event('input')); }
+        }, 100);
+        return;
+      }
+      showSection(r.section);
+      setTimeout(() => {
+        if (r.target && document.body.contains(r.target)) {
+          r.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          r.target.style.transition = 'box-shadow 0.3s';
+          r.target.style.boxShadow = '0 0 0 2px var(--amber)';
+          setTimeout(() => { r.target.style.boxShadow = ''; }, 1400);
+        }
+      }, 80);
+    });
+  });
+}
+
 // ── Wrap every table so a wide one scrolls inside itself on small
 //    screens instead of forcing the whole page to scroll sideways ──
 function wrapTables() {
