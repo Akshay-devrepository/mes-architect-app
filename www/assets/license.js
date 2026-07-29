@@ -230,6 +230,12 @@ function revealModule(gate, plaintext) {
   // `quizDeck` is enhance.js's shared top-level `let` — reachable here
   // since both files execute in the same global scope.
   if (typeof quizDeck !== 'undefined') quizDeck = null;
+  // The AI Coach's mic/speaker buttons live inside Module 8's own gated
+  // content, so they don't exist in the DOM (and can't be initialized)
+  // until whichever module was unlocked reveals them — a no-op call for
+  // every module except 8, where the AI chat markup lives.
+  if (window.initVoiceInput) window.initVoiceInput();
+  if (window.updateVoiceOutButton) window.updateVoiceOutButton();
 }
 
 async function attemptUnlockModule(gate, keyInput) {

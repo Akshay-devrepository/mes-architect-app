@@ -26,5 +26,8 @@
     "@capacitor/core": "^8.4.2",
     "http-server": "^14.1.1",
     "sharp": "^0.35.3"
+  },
+  "dependencies": {
+    "@capacitor-community/speech-recognition": "^7.0.1"
   }
 }
