@@ -192,6 +192,8 @@ let quizQueue = [];        // ids remaining this session
 let quizIndex = 0;
 let quizFlipped = false;
 let quizFilter = 'due';    // 'due' | 'all'
+let quizMode = 'practice'; // 'practice' | 'mock' — which Quiz Mode tab is showing
+let practiceStarted = false; // mirrors the old root.dataset.started auto-start-once flag
 
 const QUIZ_SCHEDULE_KEY = 'mes_quiz_schedule_v2';
 const SM2_DEFAULT_EASE = 2.5;
@@ -310,11 +312,28 @@ function startQuizQueue() {
 function renderQuiz() {
   const root = document.getElementById('quiz-root');
   if (!root) return;
+
+  root.innerHTML =
+    '<div class="quiz-mode-tabs">' +
+      '<button class="quiz-mode-tab' + (quizMode === 'practice' ? ' active' : '') + '" id="quizModePracticeBtn">🔁 Practice</button>' +
+      '<button class="quiz-mode-tab' + (quizMode === 'mock' ? ' active' : '') + '" id="quizModeMockBtn">🎤 Mock Interview</button>' +
+    '</div>' +
+    '<div id="quiz-mode-body"></div>';
+
+  document.getElementById('quizModePracticeBtn').addEventListener('click', () => { quizMode = 'practice'; renderQuiz(); });
+  document.getElementById('quizModeMockBtn').addEventListener('click', () => { quizMode = 'mock'; renderQuiz(); });
+
+  const body = document.getElementById('quiz-mode-body');
+  if (quizMode === 'practice') renderPracticeQuiz(body);
+  else renderMockInterview(body);
+}
+
+function renderPracticeQuiz(root) {
   const deck = buildQuizDeck();
 
-  if (!root.dataset.started) {
+  if (!practiceStarted) {
     startQuizQueue();
-    root.dataset.started = '1';
+    practiceStarted = true;
   }
 
   const schedule = loadSchedule();
@@ -397,6 +416,197 @@ function renderQuiz() {
       renderQuiz();
     });
   }
+}
+
+// ══════════════════════════════════════════
+// MOCK INTERVIEW MODE — a timed, one-question-at-a-time session pulled from
+// the same quiz deck, grouped by tag ("track") rather than by module, since
+// nearly all quizzable cards live under Module 8's own sub-tags (RECRUITER,
+// HIRING MANAGER, TECHNICAL PANEL, OEE DRILL, etc.) rather than spread across
+// modules. Ratings feed the same SM-2 schedule as Practice mode, so a mock
+// session strengthens the one shared memory model instead of forking a
+// second tracking system.
+// ══════════════════════════════════════════
+let mockConfig = null;   // { track, length } once a session has started
+let mockQueue = [];
+let mockIndex = 0;
+let mockRevealed = false;
+let mockResults = [];    // { id, rating: 'strong' | 'partial' | 'blank' }
+
+function availableTracks() {
+  const deck = buildQuizDeck();
+  return Array.from(new Set(deck.map((c) => c.tag))).sort();
+}
+
+function trackPoolSize(track) {
+  const deck = buildQuizDeck();
+  return track === 'all' ? deck.length : deck.filter((c) => c.tag === track).length;
+}
+
+function startMockSession(track, length) {
+  const deck = buildQuizDeck();
+  const pool = track === 'all' ? deck : deck.filter((c) => c.tag === track);
+  mockConfig = { track, length: Math.min(length, pool.length) };
+  mockQueue = shuffle(pool).slice(0, mockConfig.length).map((c) => c.id);
+  mockIndex = 0;
+  mockRevealed = false;
+  mockResults = [];
+}
+
+function renderMockInterview(container) {
+  if (!mockConfig) { renderMockSetup(container); return; }
+  if (mockIndex >= mockQueue.length) { renderMockResults(container); return; }
+  renderMockSession(container);
+}
+
+function renderMockSetup(container) {
+  const tracks = availableTracks();
+  const deck = buildQuizDeck();
+
+  let html = '<div class="mock-setup">';
+  html += '<div class="mock-setup-title">🎤 Mock Interview</div>';
+  html += '<div class="mock-setup-sub">One question at a time, no peeking at the answer first. Reveal when you\'re ready, rate yourself, move on — just like a real panel. Ratings count toward the same review schedule as Practice mode.</div>';
+  html += '<label class="mock-field-label">Track</label>';
+  html += '<select class="quiz-select" id="mockTrackSelect">' +
+    '<option value="all">🎲 Full Mix — all ' + deck.length + ' cards</option>' +
+    tracks.map((t) => '<option value="' + escapeHtml(t) + '">' + escapeHtml(t) + ' (' + trackPoolSize(t) + ')</option>').join('') +
+  '</select>';
+  html += '<label class="mock-field-label">Length</label>';
+  html += '<select class="quiz-select" id="mockLengthSelect">' +
+    [10, 20, 30].map((n) => '<option value="' + n + '">' + n + ' questions</option>').join('') +
+  '</select>';
+  html += '<div class="mock-pool-hint" id="mockPoolHint"></div>';
+  html += '<button class="quiz-restart-btn" id="mockStartBtn">Start Mock Interview</button>';
+  html += '</div>';
+  container.innerHTML = html;
+
+  const trackSelect = document.getElementById('mockTrackSelect');
+  const lengthSelect = document.getElementById('mockLengthSelect');
+  const hint = document.getElementById('mockPoolHint');
+
+  function updateHint() {
+    const size = trackPoolSize(trackSelect.value);
+    const wanted = parseInt(lengthSelect.value, 10);
+    hint.textContent = wanted > size
+      ? 'This track only has ' + size + ' card' + (size === 1 ? '' : 's') + ' — the session will use all of them.'
+      : size + ' cards available in this track.';
+  }
+  updateHint();
+  trackSelect.addEventListener('change', updateHint);
+  lengthSelect.addEventListener('change', updateHint);
+
+  document.getElementById('mockStartBtn').addEventListener('click', () => {
+    startMockSession(trackSelect.value, parseInt(lengthSelect.value, 10));
+    renderQuiz();
+  });
+}
+
+function renderMockSession(container) {
+  const deck = buildQuizDeck();
+  const card = deck.find((c) => c.id === mockQueue[mockIndex]);
+  const progressPct = Math.round((mockIndex / mockQueue.length) * 100);
+
+  let html = '<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:' + progressPct + '%"></div></div>';
+  html += '<div class="mock-session-meta">Question ' + (mockIndex + 1) + ' of ' + mockQueue.length +
+    (mockConfig.track !== 'all' ? ' · ' + escapeHtml(mockConfig.track) : ' · Full Mix') + '</div>';
+  html += '<div class="mock-question-card">' +
+    '<div class="mock-question-tag">// ' + escapeHtml(card.tag) + '</div>' +
+    '<div class="mock-question-text">' + escapeHtml(card.q) + '</div>' +
+  '</div>';
+
+  if (!mockRevealed) {
+    html += '<div class="mock-hint">Answer it out loud or in your head — then reveal.</div>';
+    html += '<button class="quiz-restart-btn" id="mockRevealBtn">Reveal Answer</button>';
+  } else {
+    html += '<div class="mock-answer-card">' +
+      '<div class="mock-answer-label">// Consultant Answer</div>' +
+      '<div class="mock-answer-text">' + escapeHtml(card.a) + '</div>' +
+    '</div>';
+    html += '<div class="quiz-rate-row mock-rate-row">' +
+      '<button class="quiz-rate-btn again" id="mockBlankBtn">❌ Blank</button>' +
+      '<button class="quiz-rate-btn partial" id="mockPartialBtn">🤔 Partial</button>' +
+      '<button class="quiz-rate-btn good" id="mockStrongBtn">✅ Strong</button>' +
+    '</div>';
+  }
+  html += '<button class="mock-exit-btn" id="mockExitBtn">Exit to setup</button>';
+
+  container.innerHTML = html;
+
+  if (!mockRevealed) {
+    document.getElementById('mockRevealBtn').addEventListener('click', () => { mockRevealed = true; renderQuiz(); });
+  } else {
+    document.getElementById('mockBlankBtn').addEventListener('click', () => rateMockCard(card.id, 'blank'));
+    document.getElementById('mockPartialBtn').addEventListener('click', () => rateMockCard(card.id, 'partial'));
+    document.getElementById('mockStrongBtn').addEventListener('click', () => rateMockCard(card.id, 'strong'));
+  }
+  document.getElementById('mockExitBtn').addEventListener('click', () => { mockConfig = null; renderQuiz(); });
+}
+
+function rateMockCard(id, rating) {
+  const qualityMap = { strong: 4, partial: 3, blank: 2 };
+  const s = loadSchedule();
+  scheduleCard(s, id, qualityMap[rating]);
+  saveSchedule(s);
+  mockResults.push({ id, rating });
+  mockIndex++;
+  mockRevealed = false;
+  renderQuiz();
+}
+
+function renderMockResults(container) {
+  const deck = buildQuizDeck();
+  const byId = {};
+  deck.forEach((c) => { byId[c.id] = c; });
+
+  const strong = mockResults.filter((r) => r.rating === 'strong').length;
+  const partial = mockResults.filter((r) => r.rating === 'partial').length;
+  const blank = mockResults.filter((r) => r.rating === 'blank').length;
+
+  const weakTags = {};
+  mockResults.filter((r) => r.rating !== 'strong').forEach((r) => {
+    const card = byId[r.id];
+    if (!card) return;
+    weakTags[card.tag] = (weakTags[card.tag] || 0) + 1;
+  });
+  const weakList = Object.entries(weakTags).sort((a, b) => b[1] - a[1]);
+
+  let html = '<div class="mock-results">';
+  html += '<div class="mock-results-title">Session Complete</div>';
+  html += '<div class="mock-results-score">' +
+    '<div class="mock-score strong"><span class="mock-score-num">' + strong + '</span><span class="mock-score-label">Strong</span></div>' +
+    '<div class="mock-score partial"><span class="mock-score-num">' + partial + '</span><span class="mock-score-label">Partial</span></div>' +
+    '<div class="mock-score blank"><span class="mock-score-num">' + blank + '</span><span class="mock-score-label">Blank</span></div>' +
+  '</div>';
+
+  if (weakList.length) {
+    html += '<div class="mock-weak-title">Worth another pass:</div>';
+    html += '<div class="mock-weak-list">' +
+      weakList.map(([tag, count]) =>
+        '<div class="mock-weak-item"><span>' + escapeHtml(tag) + '</span><span class="mock-weak-count">' + count + '</span></div>'
+      ).join('') +
+    '</div>';
+  } else {
+    html += '<div class="mock-weak-title">Clean sweep — everything rated Strong. 🎉</div>';
+  }
+
+  const weakSectionCard = mockResults
+    .filter((r) => r.rating !== 'strong')
+    .map((r) => byId[r.id])
+    .find((c) => c && c.section !== null && c.section !== undefined);
+  if (weakSectionCard && typeof sectionTitles !== 'undefined' && sectionTitles[weakSectionCard.section]) {
+    html += '<button class="quiz-restart-btn mock-jump-btn" id="mockReviewModuleBtn">Jump to ' + escapeHtml(sectionTitles[weakSectionCard.section]) + '</button>';
+  }
+
+  html += '<button class="quiz-restart-btn" id="mockRestartBtn">New Mock Interview</button>';
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  if (weakSectionCard) {
+    const jumpBtn = document.getElementById('mockReviewModuleBtn');
+    if (jumpBtn) jumpBtn.addEventListener('click', () => showSection(weakSectionCard.section));
+  }
+  document.getElementById('mockRestartBtn').addEventListener('click', () => { mockConfig = null; renderQuiz(); });
 }
 
 window.renderSaved = renderSaved;
