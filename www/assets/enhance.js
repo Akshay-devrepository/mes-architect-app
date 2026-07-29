@@ -181,20 +181,81 @@ function escapeHtml(str) {
 }
 
 // ══════════════════════════════════════════
-// QUIZ MODE
+// QUIZ MODE — spaced repetition (simplified SM-2, the same idea Anki is
+// built on). Each card tracks its own interval/ease/due-date instead of a
+// single mastered/not-mastered flag, so cards you know well resurface
+// after weeks, cards you miss resurface tomorrow, and "due today" is an
+// actual queue rather than "everything not yet mastered."
 // ══════════════════════════════════════════
 let quizDeck = null;      // full deck, built once
 let quizQueue = [];        // ids remaining this session
 let quizIndex = 0;
 let quizFlipped = false;
-let quizFilter = 'all';    // 'all' | 'unmastered'
+let quizFilter = 'due';    // 'due' | 'all'
 
-function loadMastered() {
-  try { return new Set(JSON.parse(localStorage.getItem(QUIZ_MASTERED_KEY)) || []); }
-  catch (e) { return new Set(); }
+const QUIZ_SCHEDULE_KEY = 'mes_quiz_schedule_v2';
+const SM2_DEFAULT_EASE = 2.5;
+const SM2_MIN_EASE = 1.3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function loadSchedule() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(QUIZ_SCHEDULE_KEY));
+    if (raw) return raw;
+  } catch (e) { /* fall through to migration/empty */ }
+
+  // One-time migration from the old binary mastered/not-mastered set, so
+  // upgrading doesn't throw away existing progress: a previously-mastered
+  // card starts with a short established interval instead of "new."
+  const migrated = {};
+  try {
+    const old = JSON.parse(localStorage.getItem(QUIZ_MASTERED_KEY));
+    if (Array.isArray(old)) {
+      old.forEach((id) => {
+        migrated[id] = { interval: 6, ease: SM2_DEFAULT_EASE, reps: 2, due: Date.now() };
+      });
+      localStorage.removeItem(QUIZ_MASTERED_KEY);
+    }
+  } catch (e) { /* no old data — fresh start */ }
+  saveSchedule(migrated);
+  return migrated;
 }
-function saveMastered(set) {
-  localStorage.setItem(QUIZ_MASTERED_KEY, JSON.stringify(Array.from(set)));
+function saveSchedule(schedule) {
+  localStorage.setItem(QUIZ_SCHEDULE_KEY, JSON.stringify(schedule));
+}
+
+// quality: 4 = "Got it", 2 = "Still fuzzy" (simplified from SM-2's 0-5 scale
+// down to the two ratings the UI actually offers).
+function scheduleCard(schedule, id, quality) {
+  const card = schedule[id] || { interval: 0, ease: SM2_DEFAULT_EASE, reps: 0, due: 0 };
+  if (quality < 3) {
+    card.reps = 0;
+    card.interval = 1;
+  } else {
+    card.reps += 1;
+    if (card.reps === 1) card.interval = 1;
+    else if (card.reps === 2) card.interval = 6;
+    else card.interval = Math.round(card.interval * card.ease);
+  }
+  card.ease = Math.max(SM2_MIN_EASE, card.ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+  card.due = Date.now() + card.interval * DAY_MS;
+  schedule[id] = card;
+  return card;
+}
+
+function isDue(schedule, id) {
+  const card = schedule[id];
+  return !card || card.due <= Date.now();
+}
+
+function nextDueInWords(schedule, deck) {
+  const future = deck
+    .map((c) => schedule[c.id])
+    .filter((c) => c && c.due > Date.now())
+    .sort((a, b) => a.due - b.due);
+  if (!future.length) return null;
+  const days = Math.ceil((future[0].due - Date.now()) / DAY_MS);
+  return days <= 1 ? 'tomorrow' : 'in ' + days + ' days';
 }
 
 function buildQuizDeck() {
@@ -233,9 +294,9 @@ function shuffle(arr) {
 
 function startQuizQueue() {
   const deck = buildQuizDeck();
-  const mastered = loadMastered();
-  const pool = quizFilter === 'unmastered' ? deck.filter(c => !mastered.has(c.id)) : deck;
-  quizQueue = shuffle(pool).map(c => c.id);
+  const schedule = loadSchedule();
+  const pool = quizFilter === 'due' ? deck.filter((c) => isDue(schedule, c.id)) : deck;
+  quizQueue = shuffle(pool).map((c) => c.id);
   quizIndex = 0;
   quizFlipped = false;
 }
@@ -250,24 +311,34 @@ function renderQuiz() {
     root.dataset.started = '1';
   }
 
-  const mastered = loadMastered();
-  const totalInPool = quizFilter === 'unmastered' ? deck.filter(c => !mastered.has(c.id)).length : deck.length;
+  const schedule = loadSchedule();
+  const dueCount = deck.filter((c) => isDue(schedule, c.id)).length;
+  const learned = deck.filter((c) => schedule[c.id] && schedule[c.id].reps > 0).length;
+  const totalInPool = quizFilter === 'due' ? dueCount : deck.length;
 
   let html = '';
   html += '<div class="quiz-toolbar">';
   html += '<span class="quiz-stat">Deck: <b>' + deck.length + '</b> cards</span>';
-  html += '<span class="quiz-stat">Mastered: <b>' + mastered.size + '</b> / ' + deck.length + '</span>';
+  html += '<span class="quiz-stat">Due today: <b>' + dueCount + '</b></span>';
+  html += '<span class="quiz-stat">Learned: <b>' + learned + '</b> / ' + deck.length + '</span>';
   html += '<select class="quiz-select" id="quizFilterSelect">' +
+            '<option value="due"' + (quizFilter === 'due' ? ' selected' : '') + '>Due for review</option>' +
             '<option value="all"' + (quizFilter === 'all' ? ' selected' : '') + '>All cards</option>' +
-            '<option value="unmastered"' + (quizFilter === 'unmastered' ? ' selected' : '') + '>Not yet mastered</option>' +
           '</select>';
   html += '<button class="btn-sm" id="quizShuffleBtn">🔀 Shuffle / Restart</button>';
   html += '</div>';
 
   if (quizQueue.length === 0) {
+    const nextDue = nextDueInWords(schedule, deck);
+    const doneTitle = quizFilter === 'due'
+      ? (nextDue ? 'All caught up 🎉' : 'Nothing to review yet')
+      : 'Deck cleared for this session';
+    const doneSub = quizFilter === 'due' && nextDue
+      ? 'Next card due ' + nextDue + '. Switch to "All cards" to review early anyway.'
+      : learned + ' of ' + deck.length + ' cards learned so far.';
     html += '<div class="quiz-done">' +
-      '<div class="quiz-done-title">' + (totalInPool === 0 ? 'Nothing to review 🎉' : 'Deck cleared for this session') + '</div>' +
-      '<div class="quiz-done-sub">' + mastered.size + ' of ' + deck.length + ' cards mastered overall.</div>' +
+      '<div class="quiz-done-title">' + doneTitle + '</div>' +
+      '<div class="quiz-done-sub">' + doneSub + '</div>' +
       '<button class="quiz-restart-btn" id="quizRestartBtn">Start Again</button>' +
       '</div>';
     root.innerHTML = html;
@@ -277,7 +348,7 @@ function renderQuiz() {
     return;
   }
 
-  const progressPct = Math.round(((deck.length - quizQueue.length) / Math.max(deck.length, 1)) * 100);
+  const progressPct = Math.round(((totalInPool - quizQueue.length) / Math.max(totalInPool, 1)) * 100);
   const card = deck.find(c => c.id === quizQueue[quizIndex]);
 
   html += '<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:' + progressPct + '%"></div></div>';
@@ -292,7 +363,7 @@ function renderQuiz() {
   if (quizFlipped) {
     html += '<div class="quiz-rate-row">' +
       '<button class="quiz-rate-btn again" id="quizAgainBtn">😕 Still fuzzy — review again</button>' +
-      '<button class="quiz-rate-btn good" id="quizGoodBtn">✅ Got it — mark mastered</button>' +
+      '<button class="quiz-rate-btn good" id="quizGoodBtn">✅ Got it — see you in a few days</button>' +
       '</div>';
   }
   html += '</div>';
@@ -306,15 +377,15 @@ function renderQuiz() {
   if (quizFlipped) {
     document.getElementById('quizAgainBtn').addEventListener('click', () => {
       const id = quizQueue.splice(quizIndex, 1)[0];
-      quizQueue.push(id);
-      const m = loadMastered(); m.delete(id); saveMastered(m);
+      quizQueue.push(id); // resurface later in this same session too
+      const s = loadSchedule(); scheduleCard(s, id, 2); saveSchedule(s);
       if (quizIndex >= quizQueue.length) quizIndex = 0;
       quizFlipped = false;
       renderQuiz();
     });
     document.getElementById('quizGoodBtn').addEventListener('click', () => {
       const id = quizQueue.splice(quizIndex, 1)[0];
-      const m = loadMastered(); m.add(id); saveMastered(m);
+      const s = loadSchedule(); scheduleCard(s, id, 4); saveSchedule(s);
       if (quizIndex >= quizQueue.length) quizIndex = 0;
       quizFlipped = false;
       renderQuiz();
