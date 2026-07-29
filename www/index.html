@@ -509,6 +509,7 @@ body.ai-chat-maximized { overflow: hidden; }
   border-radius: 8px;
   font-size: 13px;
   line-height: 1.6;
+  white-space: pre-wrap;
 }
 .msg.user .msg-bubble { background: var(--amber2); color: #000; font-weight: 500; border-radius: 8px 8px 2px 8px; }
 .msg.ai .msg-bubble { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 2px 8px 8px 8px; }
@@ -2447,10 +2448,17 @@ function addMessage(role, text) {
   const container = document.getElementById('aiMessages');
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-  div.innerHTML = `<div class="msg-label">${role === 'user' ? '// YOU' : '// MES EXPERT COACH'}</div>
-    <div class="msg-bubble">${text.replace(/\n/g, '<br>')}</div>`;
+  const label = document.createElement('div');
+  label.className = 'msg-label';
+  label.textContent = role === 'user' ? '// YOU' : '// MES EXPERT COACH';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = text; // textContent, not innerHTML — AI/user text is never treated as markup
+  div.appendChild(label);
+  div.appendChild(bubble);
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+  return bubble; // callers streaming a response in can keep updating bubble.textContent
 }
 
 function showTyping() {
@@ -2529,6 +2537,9 @@ When answering in-scope questions, act as the user's personal expert coach:
 
 Respond in a confident, direct consulting style. No hedging. Real expertise.`;
 
+  let bubble = null;
+  let fullText = '';
+
   try {
     // Checked by prefix, NOT by comparing against the placeholder constant
     // declared above — CI's sed substitution matches that exact text
@@ -2545,26 +2556,66 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
         model: GROQ_MODEL,
         messages: [{ role: 'system', content: systemPrompt }, ...conversationHistory],
         temperature: 0.4,
-        max_tokens: 900
+        max_tokens: 900,
+        stream: true
       })
     });
     if (!res.ok) {
       const errBody = await res.json().catch(() => null);
       throw new Error((errBody && errBody.error && errBody.error.message) || ('HTTP ' + res.status));
     }
-    const data = await res.json();
-    const replyText = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    if (!replyText) throw new Error('empty-response');
 
+    // Headers are back and the request is genuinely streaming now — swap
+    // the typing dots for a live bubble that fills in as tokens arrive,
+    // same SSE chunk format Groq shares with the OpenAI chat API.
     removeTyping();
-    conversationHistory.push({ role: 'assistant', content: replyText });
-    addMessage('ai', replyText);
+    bubble = addMessage('ai', '');
+    const scrollBox = document.getElementById('aiMessages');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep the last (possibly partial) line for next read
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (payload === '[DONE]') continue;
+
+        let json;
+        try { json = JSON.parse(payload); } catch (e) { continue; }
+        const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+        if (delta) {
+          fullText += delta;
+          bubble.textContent = fullText;
+          scrollBox.scrollTop = scrollBox.scrollHeight;
+        }
+      }
+    }
+
+    if (!fullText) throw new Error('empty-response');
+    conversationHistory.push({ role: 'assistant', content: fullText });
   } catch (err) {
     removeTyping();
-    if (err && err.message === 'groq-not-configured') {
-      addMessage('ai', 'The AI engine isn’t set up yet — the app owner needs to add a free Groq API key (see the README). No sign-in needed on your end once it is.');
+    if (bubble && fullText) {
+      // The stream had already produced real content before failing —
+      // keep it on screen instead of throwing away a mostly-good answer.
+      bubble.textContent = fullText + '\n\n[Response interrupted — connection issue]';
+      conversationHistory.push({ role: 'assistant', content: fullText });
     } else {
-      addMessage('ai', 'The AI had trouble responding (' + (err && err.message ? err.message : 'unknown error') + '). Please check your connection and try again.');
+      if (bubble) bubble.parentElement.remove(); // drop the empty bubble the stream never filled in
+      if (err && err.message === 'groq-not-configured') {
+        addMessage('ai', 'The AI engine isn’t set up yet — the app owner needs to add a free Groq API key (see the README). No sign-in needed on your end once it is.');
+      } else {
+        addMessage('ai', 'The AI had trouble responding (' + (err && err.message ? err.message : 'unknown error') + '). Please check your connection and try again.');
+      }
     }
   }
 
