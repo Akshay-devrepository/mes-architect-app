@@ -2435,7 +2435,13 @@ When answering in-scope questions, act as the user's personal expert coach:
 Respond in a confident, direct consulting style. No hedging. Real expertise.`;
 
   try {
-    if (!GROQ_API_KEY || GROQ_API_KEY === '__GROQ_API_KEY__') throw new Error('groq-not-configured');
+    // Checked by prefix, NOT by comparing against the placeholder constant
+    // declared above — CI's sed substitution matches that exact text
+    // wherever it appears in this file, including inside a string literal
+    // used for comparison, which would silently rewrite the check into
+    // "realKey === realKey" (always true). Bit us in production once;
+    // prefix-checking the key format instead can't have that problem.
+    if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) throw new Error('groq-not-configured');
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
