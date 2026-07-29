@@ -16,7 +16,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // A committed, stable debug keystore — without this, every CI run (a
+    // fresh VM with no pre-existing ~/.android/debug.keystore) gets its own
+    // auto-generated, differently-signed debug key, so Android refuses to
+    // install any new build over the last one ("conflicts with an existing
+    // package"). Same keystore every build = every build can update the last.
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeType 'PKCS12'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
