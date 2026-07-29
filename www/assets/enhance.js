@@ -269,6 +269,12 @@ function buildQuizDeck() {
     if (!qText || !aText) return;
     deck.push({
       id: 'qa-' + i,
+      // Recorded alongside the id (not encoded inside it) so the Progress
+      // Dashboard can attribute a card to its module without needing to
+      // change the id format itself — the id is what spaced-repetition
+      // schedule data is keyed by, so changing its shape would silently
+      // orphan everyone's existing review history.
+      section: sectionIndexOf(box),
       tag: label ? label.textContent.replace(/^\/\/\s*/, '').trim() : 'Concept Board',
       q: qText.textContent.trim(),
       a: aText.textContent.trim()
@@ -276,7 +282,7 @@ function buildQuizDeck() {
   });
 
   (window.QUIZ_DATA_EXTRA || []).forEach((item, i) => {
-    deck.push({ id: 'extra-' + i, tag: item.tag, q: item.q, a: item.a });
+    deck.push({ id: 'extra-' + i, section: null, tag: item.tag, q: item.q, a: item.a });
   });
 
   quizDeck = deck;
@@ -447,6 +453,99 @@ function renderGlossaryList(query) {
 window.renderGlossary = renderGlossary;
 
 // ══════════════════════════════════════════
+// PROGRESS DASHBOARD — reads data every other feature already collects
+// (visited sections, the quiz schedule, bookmarks) rather than tracking
+// anything new, plus a per-module quiz breakdown using each card's SM-2
+// ease factor as a rough "how solid is this module" signal.
+// ══════════════════════════════════════════
+function computeProgressStats() {
+  const schedule = loadSchedule();
+  const deck = buildQuizDeck();
+  const contentModulesVisited = Array.from(visitedSections).filter((i) => i < 16).length;
+  const learned = deck.filter((c) => schedule[c.id] && schedule[c.id].reps > 0).length;
+  const due = deck.filter((c) => isDue(schedule, c.id)).length;
+  const bookmarkCount = Object.keys(loadBookmarks()).length;
+
+  const perModule = {};
+  let extraTotal = 0, extraAttempted = 0;
+  deck.forEach((card) => {
+    const sched = schedule[card.id];
+    if (card.section !== null && card.section !== undefined) {
+      const modIdx = card.section;
+      if (!perModule[modIdx]) perModule[modIdx] = { total: 0, attempted: 0, easeSum: 0 };
+      perModule[modIdx].total++;
+      if (sched) { perModule[modIdx].attempted++; perModule[modIdx].easeSum += sched.ease; }
+    } else {
+      extraTotal++;
+      if (sched) extraAttempted++;
+    }
+  });
+
+  return { contentModulesVisited, learned, due, bookmarkCount, deckSize: deck.length, perModule, extraTotal, extraAttempted };
+}
+
+function homeStatsHtml(stats) {
+  return '<div class="home-stat"><div class="home-stat-value">' + stats.contentModulesVisited + '/16</div><div class="home-stat-label">Modules visited</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.learned + '/' + stats.deckSize + '</div><div class="home-stat-label">Quiz cards learned</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.due + '</div><div class="home-stat-label">Due today</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.bookmarkCount + '</div><div class="home-stat-label">Bookmarks</div></div>';
+}
+
+function renderHomeStats() {
+  const el = document.getElementById('homeStats');
+  if (!el) return;
+  const stats = computeProgressStats();
+  el.innerHTML = '<div class="home-stats-row">' + homeStatsHtml(stats) +
+    '</div><a class="home-stat-link" onclick="showSection(19)">View full progress →</a>';
+}
+window.renderHomeStats = renderHomeStats;
+
+function renderProgress() {
+  const root = document.getElementById('progress-root');
+  if (!root) return;
+  const stats = computeProgressStats();
+
+  let moduleRows = '';
+  for (let i = 0; i < 16; i++) {
+    const isLocked = !!document.querySelector('#sec-' + i + ' .locked-gate:not(.unlocked)');
+    const visited = visitedSections.has(i);
+    const modStats = stats.perModule[i];
+    let statusLabel, statusClass;
+    if (isLocked) { statusLabel = '🔒 Locked'; statusClass = 'locked'; }
+    else if (modStats && modStats.attempted > 0) {
+      // Require a meaningful sample before asserting Strong/Needs review —
+      // otherwise 1 lucky (or unlucky) card out of dozens would swing a
+      // verdict that's supposed to mean something.
+      const coverage = modStats.attempted / modStats.total;
+      const avgEase = modStats.easeSum / modStats.attempted;
+      if (coverage < 0.3) { statusLabel = 'In progress'; statusClass = 'visited'; }
+      else if (avgEase < 2.2) { statusLabel = 'Needs review'; statusClass = 'needs-review'; }
+      else { statusLabel = 'Strong'; statusClass = 'strong'; }
+    } else if (visited) { statusLabel = 'Visited, no quiz yet'; statusClass = 'visited'; }
+    else { statusLabel = 'Not started'; statusClass = 'not-started'; }
+
+    moduleRows +=
+      '<div class="progress-row">' +
+        '<div class="progress-row-title">' + escapeHtml(sectionTitles[i]) + '</div>' +
+        '<div class="progress-row-quiz">' + (modStats ? modStats.attempted + '/' + modStats.total + ' cards' : '—') + '</div>' +
+        '<div class="progress-row-status ' + statusClass + '">' + statusLabel + '</div>' +
+      '</div>';
+  }
+
+  root.innerHTML =
+    '<div class="home-stats-row">' + homeStatsHtml(stats) + '</div>' +
+    '<div class="progress-section-title">Per-module quiz performance</div>' +
+    '<div class="progress-table">' +
+      '<div class="progress-row progress-row-head"><div>Module</div><div>Quiz cards</div><div>Status</div></div>' +
+      moduleRows +
+    '</div>' +
+    (stats.extraTotal > 0
+      ? '<div class="progress-extra-note">Plus ' + stats.extraAttempted + '/' + stats.extraTotal + ' hand-written drill cards (calculations, acronyms) not tied to a specific module.</div>'
+      : '');
+}
+window.renderProgress = renderProgress;
+
+// ══════════════════════════════════════════
 // GLOBAL SEARCH — searches whatever concept cards and questions are
 // currently in the DOM (so it naturally only covers the free module plus
 // whatever's been unlocked) and the Glossary, from one overlay reachable
@@ -584,4 +683,8 @@ function wrapTables() {
 document.addEventListener('DOMContentLoaded', () => {
   injectStars();
   wrapTables();
+  // Home is the active view on first load, and its stats strip is built by
+  // this file — but this file loads after the INIT block that first shows
+  // Home, so that first render needs to happen here instead.
+  renderHomeStats();
 });

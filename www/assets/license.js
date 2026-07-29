@@ -222,6 +222,14 @@ function revealModule(gate, plaintext) {
   if (window.wrapTables) window.wrapTables();
   const grid = document.getElementById('homeGrid');
   if (grid) grid.dataset.built = '0'; // force the lock badge to refresh next Home render
+  // Quiz Mode memoizes its deck the first time anything asks for it (see
+  // enhance.js buildQuizDeck) — that can happen before this module's
+  // content exists yet (enhance.js's own DOMContentLoaded handler runs
+  // before this file's restore-from-cache loop finishes), silently
+  // freezing its questions out of the deck for the rest of the session.
+  // `quizDeck` is enhance.js's shared top-level `let` — reachable here
+  // since both files execute in the same global scope.
+  if (typeof quizDeck !== 'undefined') quizDeck = null;
 }
 
 async function attemptUnlockModule(gate, keyInput) {
@@ -366,4 +374,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // locked (covers a case where more modules got added after they bought).
   const savedBundleKey = localStorage.getItem(BUNDLE_KEY_CACHE_KEY);
   if (savedBundleKey) await unlockAllWithKey(savedBundleKey);
+
+  // enhance.js's own DOMContentLoaded handler (which builds the Home stats
+  // strip) runs before this one finishes restoring cached-unlocked modules
+  // — refresh it now that the true unlock state actually exists.
+  if (window.renderHomeStats) window.renderHomeStats();
 });

@@ -1391,6 +1391,7 @@ code {
   <div class="nav-item" data-idx="16" onclick="showSection(16)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">17</span> Quiz Mode<span class="nav-dot"></span></div>
   <div class="nav-item" data-idx="18" onclick="showSection(18)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">19</span> 📖 Glossary<span class="nav-dot"></span></div>
   <div class="nav-item" data-idx="17" onclick="showSection(17)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">18</span> ★ Saved<span class="nav-dot" id="savedCountDot" style="background:transparent;width:auto;height:auto;border-radius:0;font-family:var(--mono);font-size:9px;color:var(--amber);"></span></div>
+  <div class="nav-item" data-idx="19" onclick="showSection(19)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">20</span> 📊 Progress<span class="nav-dot"></span></div>
 
   <div class="sidebar-footer" id="sidebarFooter">
     <div class="level-badge">▲ ARCHITECT TRACK</div>
@@ -1441,6 +1442,7 @@ code {
     <div class="section-title">Choose a Module</div>
     <div class="section-desc">18 modules covering ISA-95, ISA-88, enterprise architecture, cloud, AI, and interview coaching. Tap any card to jump in — your place is saved as you go.</div>
   </div>
+  <div id="homeStats"></div>
   <div class="home-grid" id="homeGrid"></div>
 </div><!-- end sec-home -->
 
@@ -2150,12 +2152,24 @@ Process Design   Resource Plan  OEE Actuals       Spare Parts
   <div id="glossary-root"></div>
 </div><!-- end sec-18 -->
 
+<!-- ══════════════════════════════════════════
+     SECTION 20: PROGRESS DASHBOARD
+══════════════════════════════════════════ -->
+<div class="section" id="sec-19">
+  <div class="section-header">
+    <div class="section-tag">// YOUR PROGRESS</div>
+    <div class="section-title">📊 Progress Dashboard</div>
+    <div class="section-desc">Modules visited, quiz mastery, and which modules' cards keep coming back as "still fuzzy" — a hint at what's worth another pass before an interview.</div>
+  </div>
+  <div id="progress-root"></div>
+</div><!-- end sec-19 -->
+
 </main><!-- end #main -->
 
 <script>
 // ── STATE ──
 let currentSection = null; // null while on Home
-const totalSections = 19;
+const totalSections = 20;
 const sectionTitles = [
   '01 — MES Industry Overview',
   '02 — ISA-95 Deep Dive',
@@ -2175,10 +2189,24 @@ const sectionTitles = [
   '16 — AI in Manufacturing',
   '17 — Quiz Mode',
   '18 — ★ Saved',
-  '19 — Glossary'
+  '19 — Glossary',
+  '20 — Progress Dashboard'
 ];
-const HOME_ICONS = ['🏭','📐','⚗️','🧩','🏛️','☁️','🗄️','🎯','🚀','🏗️','🗺️','🧠','🎓','⚡','🔗','🤖','🃏','⭐','📖'];
-const visitedSections = new Set();
+const HOME_ICONS = ['🏭','📐','⚗️','🧩','🏛️','☁️','🗄️','🎯','🚀','🏗️','🗺️','🧠','🎓','⚡','🔗','🤖','🃏','⭐','📖','📊'];
+
+// Persisted so "modules visited" survives a reload instead of resetting to
+// zero every time — this was a real, pre-existing bug (visitedSections was
+// only ever an in-memory Set) that the Progress Dashboard would otherwise
+// have reported wrong from the very first render.
+const VISITED_SECTIONS_KEY = 'mes_visited_sections_v1';
+function loadVisitedSections() {
+  try { return new Set(JSON.parse(localStorage.getItem(VISITED_SECTIONS_KEY)) || []); }
+  catch (e) { return new Set(); }
+}
+function saveVisitedSections(set) {
+  localStorage.setItem(VISITED_SECTIONS_KEY, JSON.stringify(Array.from(set)));
+}
+const visitedSections = loadVisitedSections();
 
 // ── HISTORY-BACKED NAVIGATION ──
 // Every view change is a real history entry (pushState), so the on-screen
@@ -2205,7 +2233,10 @@ function showSection(index) {
   document.getElementById('topbarSectionControls').style.display = '';
 
   currentSection = index;
-  visitedSections.add(index);
+  if (!visitedSections.has(index)) {
+    visitedSections.add(index);
+    saveVisitedSections(visitedSections);
+  }
 
   // Update progress
   const progress = Math.round((visitedSections.size / totalSections) * 100);
@@ -2223,6 +2254,7 @@ function showSection(index) {
   if (index === 16 && window.renderQuiz) window.renderQuiz();
   if (index === 17 && window.renderSaved) window.renderSaved();
   if (index === 18 && window.renderGlossary) window.renderGlossary();
+  if (index === 19 && window.renderProgress) window.renderProgress();
 
   // On phones/small tablets, picking a topic should close the drawer menu
   if (window.innerWidth <= 900) closeSidebar();
@@ -2242,6 +2274,7 @@ function renderHome() {
 
   currentSection = null;
   buildHomeCards();
+  if (window.renderHomeStats) window.renderHomeStats();
 
   document.getElementById('main').scrollTop = 0;
   window.scrollTo(0, 0);
