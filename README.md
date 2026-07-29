@@ -41,6 +41,25 @@ gradlew.bat assembleDebug # Windows
 
 The APK lands at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
+### Why `android/app/debug.keystore` is committed
+
+Every debug build (local or CI) is signed with this exact file —
+`android/app/build.gradle`'s `signingConfigs.debug` points at it explicitly.
+Without this, the Android Gradle Plugin falls back to auto-generating a
+keystore per-machine, and GitHub Actions runners are fresh VMs with no
+persisted `~/.android/debug.keystore`, so every CI build got its own
+distinct, differently-signed key — Android refuses to install a new APK
+over an existing install signed with a different certificate ("conflicts
+with an existing package"), so in-app updates silently could never work.
+
+**Do not delete or regenerate this file** unless you're deliberately
+resetting — doing so means every device with the app already installed
+will hit that same conflict on the next update and need a manual
+uninstall first. It's a debug-only key (the password/alias — `android` /
+`androiddebugkey` — are the same well-known values every default Android
+debug keystore uses; there's nothing sensitive in it), so it's safe to
+commit, unlike the Groq key or the license secrets.
+
 ## How update checks work
 
 Both CI workflows stamp the **same version number** — `git rev-list --count HEAD`, i.e. the commit count — onto every build, from two independent sources that always agree because they run on the same commit:
