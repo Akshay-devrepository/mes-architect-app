@@ -236,6 +236,11 @@ function revealModule(gate, plaintext) {
   // every module except 8, where the AI chat markup lives.
   if (window.initVoiceInput) window.initVoiceInput();
   if (window.updateVoiceOutButton) window.updateVoiceOutButton();
+  // Mock Interview & Quiz Mode's #quiz-root mount point doesn't exist
+  // until this exact reveal — showSection(16) already calls renderQuiz()
+  // on navigation, but a user can also unlock while already sitting on
+  // this now-locked module without navigating away and back.
+  if (gate.dataset.module === '16' && window.renderQuiz) window.renderQuiz();
 }
 
 async function attemptUnlockModule(gate, keyInput) {
