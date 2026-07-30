@@ -2551,12 +2551,50 @@ const MANUFACTURING_KEYWORDS = [
   'azure iot', 'aws iot', 'digital manufacturing', 'automation',
   'ladder logic', 'hmi', 'dcs', 'batch process', 'discrete manufacturing',
   'process manufacturing', 'pharma manufacturing', 'ot/it', 'ot security',
-  'erp integration', 'level 2', 'level 3', 'level 4', 'purdue model'
+  'erp integration', 'level 2', 'level 3', 'level 4', 'purdue model',
+  // Industry 4.0 / IIoT / smart-factory additions
+  'cyber-physical system', 'cyber physical system', 'cps', 'iot',
+  'industrial iot', 'predictive maintenance', 'condition monitoring',
+  'digital thread', 'smart sensor', 'industrial automation', 'fieldbus',
+  'profinet', 'profibus', 'modbus', 'ethernet/ip', 'devicenet',
+  'safety plc', 'robotics', 'cobot', 'collaborative robot', 'agv',
+  'automated guided vehicle', 'amr', 'autonomous mobile robot',
+  'warehouse automation', 'wms', 'connected factory', 'lean manufacturing',
+  'six sigma', 'kaizen', 'tpm', 'total productive maintenance',
+  'root cause analysis', 'fmea', 'cpk', 'first pass yield', 'fpy',
+  'takt time', 'cycle time', 'throughput', 'bottleneck analysis',
+  'value stream mapping', 'vsm', 'production scheduling', 'mrp', 'erp',
+  's/4hana', 'oracle manufacturing', 'critical manufacturing', 'delmia',
+  'factorytalk', 'aveva', 'gmp', 'good manufacturing practice',
+  '21 cfr part 11', 'cfr part 11', 'validation protocol', 'iq oq pq',
+  'change control', 'cost of quality'
 ];
 
+// Keywords list is authored with a mix of separators ("isa-95", "opc ua"),
+// but a user might type any of hyphen/space/no-separator ("ISA 95",
+// "ISA-95", "isa95") and expect the same match. Converting hyphens/
+// underscores to spaces (not stripping them outright) keeps word
+// boundaries intact — collapsing separators entirely would let short
+// keywords like "mes" false-match across word boundaries (e.g. "times
+// estimate" -> "timesestimate" contains "mes").
+function normalizeForKeywordMatch(str) {
+  return str.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Plain substring matching let short/common keywords false-match inside
+// ordinary English words ("mes" inside "times"/"comes", "recipe" inside
+// "recipes") — word-boundary-anchored patterns fix that while still
+// matching the keyword as a standalone word or phrase.
+const MANUFACTURING_KEYWORD_PATTERNS = MANUFACTURING_KEYWORDS
+  .map(normalizeForKeywordMatch)
+  .map((k) => {
+    const escaped = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+');
+    return new RegExp('\\b' + escaped + '\\b');
+  });
+
 function isManufacturingQuery(userMessage) {
-  const lower = userMessage.toLowerCase();
-  return MANUFACTURING_KEYWORDS.some((k) => lower.includes(k));
+  const normalized = normalizeForKeywordMatch(userMessage);
+  return MANUFACTURING_KEYWORD_PATTERNS.some((re) => re.test(normalized));
 }
 
 const OFF_TOPIC_REFUSAL = "I'm specialized in Digital Manufacturing and MES. Please ask questions related to Manufacturing Execution Systems, Industry 4.0, Smart Manufacturing, or industrial automation.";
