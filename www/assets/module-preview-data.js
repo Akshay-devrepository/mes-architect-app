@@ -24,5 +24,6 @@ window.MODULE_PREVIEW_TOPICS = {
   12: ['Business-first problem framing', 'Stakeholder communication matrix', 'Workshop facilitation playbook', 'Objection handling & client psychology'],
   13: ['Unified Namespace & MQTT Sparkplug B', 'AI & GenAI in manufacturing', 'Digital twin architecture', 'Manufacturing data fabric'],
   14: ['MES ↔ ERP integration deep dive', 'MES ↔ SCADA/OPC-UA/PLC deep dive', 'MES ↔ LIMS integration deep dive', 'MES ↔ Historian integration deep dive'],
-  15: ['Computer vision quality inspection', 'Predictive maintenance architecture', 'AI-driven production scheduling', 'Conversational & agentic AI in MES']
+  15: ['Computer vision quality inspection', 'Predictive maintenance architecture', 'AI-driven production scheduling', 'Conversational & agentic AI in MES'],
+  16: ['Timed mock interview sessions by track', 'Spaced-repetition flashcard practice', 'Self-paced review with due-today tracking', 'Progress synced with your dashboard']
 };

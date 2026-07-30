@@ -34,9 +34,14 @@ const ROOT = path.join(__dirname, '..');
 const INDEX_PATH = path.join(ROOT, 'www', 'index.html');
 const SECRETS_PATH = path.join(ROOT, 'LICENSE-KEYS-SECRET.md');
 
-// sec-0 (MES Industry Overview) stays free as a trial. Quiz Mode (16) and
-// Saved (17) are app features, not sellable content — never lock those.
-const LOCKED_MODULES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+// sec-0 (MES Industry Overview) stays free as a trial. Saved (17, 0-indexed
+// 17 aka "18 — Saved" in the UI) is bookmarks of whatever's already
+// unlocked, not sellable content on its own — never lock that. Mock
+// Interview & Quiz Mode (16) is now locked too, same as the content
+// modules — its own #quiz-root mount point gets encrypted like anything
+// else; the actual questions it draws from are still gated separately by
+// whichever content modules are unlocked.
+const LOCKED_MODULES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 const MODULE_NAMES = [
   'MES Industry Overview', 'ISA-95 Deep Dive', 'ISA-88 Batch Control',
@@ -44,7 +49,7 @@ const MODULE_NAMES = [
   'Database & Data Models', 'AI Interview Coach', 'Implementation Lifecycle',
   'Industry-Specific MES', 'Learning Roadmap', 'Concept Visualizations',
   'Consultant Mindset', 'Advanced Topics', 'MES Integration Deep Dive',
-  'AI in Manufacturing'
+  'AI in Manufacturing', 'Mock Interview & Quiz Mode'
 ];
 
 const PBKDF2_ITERATIONS = 100000;
