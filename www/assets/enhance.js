@@ -878,6 +878,58 @@ function runSearch(query) {
   });
 }
 
+// ══════════════════════════════════════════
+// FEEDBACK / REPORT ISSUE — no backend, so "sending" opens the user's own
+// email app with a pre-filled draft (app version + current screen included
+// automatically) addressed to the app owner. Same open/close pattern as the
+// global search overlay above (body class toggling backdrop + panel).
+// ══════════════════════════════════════════
+const FEEDBACK_EMAIL = 'primeatnit@gmail.com';
+
+function openFeedbackModal() {
+  document.body.classList.add('feedback-open');
+  document.getElementById('feedbackError').style.display = 'none';
+  document.getElementById('feedbackText').focus();
+}
+window.openFeedbackModal = openFeedbackModal;
+
+function closeFeedbackModal() {
+  document.body.classList.remove('feedback-open');
+}
+window.closeFeedbackModal = closeFeedbackModal;
+
+function sendFeedback() {
+  const type = document.getElementById('feedbackType').value;
+  const text = document.getElementById('feedbackText').value.trim();
+  if (!text) {
+    document.getElementById('feedbackError').style.display = '';
+    return;
+  }
+
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const platform = isNative ? 'Android app' : 'Website';
+  const screen = (typeof currentSection !== 'undefined' && currentSection !== null && typeof sectionTitles !== 'undefined')
+    ? (sectionTitles[currentSection] || ('Section ' + currentSection))
+    : 'Home';
+  const version = window.APP_VERSION_NAME ? 'v' + window.APP_VERSION_NAME : 'unknown';
+
+  const subject = '[MES Architect Feedback] ' + type;
+  const body = text +
+    '\n\n---\n' +
+    'Type: ' + type + '\n' +
+    'App version: ' + version + '\n' +
+    'Platform: ' + platform + '\n' +
+    'Current screen: ' + screen;
+
+  window.location.href = 'mailto:' + FEEDBACK_EMAIL +
+    '?subject=' + encodeURIComponent(subject) +
+    '&body=' + encodeURIComponent(body);
+
+  document.getElementById('feedbackText').value = '';
+  closeFeedbackModal();
+}
+window.sendFeedback = sendFeedback;
+
 // ── Wrap every table so a wide one scrolls inside itself on small
 //    screens instead of forcing the whole page to scroll sideways ──
 function wrapTables() {
