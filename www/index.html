@@ -1464,6 +1464,7 @@ code {
     <div class="section-title">Choose a Module</div>
     <div class="section-desc">18 modules covering ISA-95, ISA-88, enterprise architecture, cloud, AI, and interview coaching. Tap any card to jump in — your place is saved as you go.</div>
   </div>
+  <div id="continueCard"></div>
   <div id="homeStats"></div>
   <div class="home-grid" id="homeGrid"></div>
 </div><!-- end sec-home -->
@@ -2230,6 +2231,47 @@ function saveVisitedSections(set) {
 }
 const visitedSections = loadVisitedSections();
 
+// "Continue where you left off" — the last real section visited (never
+// Home itself, since Home doesn't go through showSection()), plus when,
+// so the Home card can show a relative time alongside the Resume button.
+const LAST_SECTION_KEY = 'mes_last_section_v1';
+function saveLastSection(index) {
+  localStorage.setItem(LAST_SECTION_KEY, JSON.stringify({ index, ts: Date.now() }));
+}
+function loadLastSection() {
+  try { return JSON.parse(localStorage.getItem(LAST_SECTION_KEY)); }
+  catch (e) { return null; }
+}
+function timeAgo(ts) {
+  const diffMs = Date.now() - ts;
+  const min = Math.floor(diffMs / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return min + (min === 1 ? ' minute ago' : ' minutes ago');
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr + (hr === 1 ? ' hour ago' : ' hours ago');
+  const day = Math.floor(hr / 24);
+  return day + (day === 1 ? ' day ago' : ' days ago');
+}
+function renderContinueCard() {
+  const el = document.getElementById('continueCard');
+  if (!el) return;
+  const last = loadLastSection();
+  if (!last || typeof last.index !== 'number' || !sectionTitles[last.index]) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML =
+    '<div class="continue-card" onclick="showSection(' + last.index + ')">' +
+      '<div class="continue-card-icon">' + (HOME_ICONS[last.index] || '📍') + '</div>' +
+      '<div class="continue-card-body">' +
+        '<div class="continue-card-label">CONTINUE WHERE YOU LEFT OFF</div>' +
+        '<div class="continue-card-title">' + sectionTitles[last.index] + '</div>' +
+        '<div class="continue-card-time">' + timeAgo(last.ts) + '</div>' +
+      '</div>' +
+      '<div class="continue-card-arrow">Resume →</div>' +
+    '</div>';
+}
+
 // ── HISTORY-BACKED NAVIGATION ──
 // Every view change is a real history entry (pushState), so the on-screen
 // Back button, the Android hardware/gesture back button (Capacitor's WebView
@@ -2259,6 +2301,7 @@ function showSection(index) {
     visitedSections.add(index);
     saveVisitedSections(visitedSections);
   }
+  saveLastSection(index);
 
   // Update progress
   const progress = Math.round((visitedSections.size / totalSections) * 100);
@@ -2296,6 +2339,7 @@ function renderHome() {
 
   currentSection = null;
   buildHomeCards();
+  renderContinueCard();
   if (window.renderHomeStats) window.renderHomeStats();
 
   document.getElementById('main').scrollTop = 0;
@@ -2863,6 +2907,7 @@ document.addEventListener('keydown', (e) => {
 // somewhere sane to land instead of leaving the app.
 history.replaceState(navState('home'), '');
 buildHomeCards();
+renderContinueCard();
 document.getElementById('progressFill').style.width = Math.round((visitedSections.size/totalSections)*100) + '%';
 </script>
 <!-- Vendored (no bundler in this project): @capacitor/core + the community
