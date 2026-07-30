@@ -1417,6 +1417,7 @@ code {
 
   <div class="sidebar-footer" id="sidebarFooter">
     <div class="level-badge">▲ ARCHITECT TRACK</div>
+    <div id="feedbackRow"><span id="feedbackLink" onclick="openFeedbackModal()">💬 Feedback / Report an issue</span></div>
   </div>
 </nav>
 
@@ -1453,6 +1454,33 @@ code {
     </div>
     <div id="searchCoverage" class="search-coverage"></div>
     <div id="searchResults" class="search-results"></div>
+  </div>
+
+  <!-- ══ FEEDBACK / REPORT ISSUE MODAL — no backend, so "sending" just
+       opens the user's own email app with a pre-filled draft addressed
+       to the app owner. ══ -->
+  <div id="feedbackBackdrop" onclick="closeFeedbackModal()"></div>
+  <div id="feedbackPanel">
+    <div class="feedback-panel-header">
+      <div class="feedback-panel-title">💬 Feedback / Report an Issue</div>
+      <button id="feedbackCloseBtn" onclick="closeFeedbackModal()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="feedback-panel-body">
+      <label class="feedback-field-label">Type</label>
+      <select class="quiz-select feedback-type-select" id="feedbackType">
+        <option value="Bug report">🐞 Bug report</option>
+        <option value="Feature idea">💡 Feature idea</option>
+        <option value="General feedback">💬 General feedback</option>
+      </select>
+      <label class="feedback-field-label">Details</label>
+      <textarea id="feedbackText" class="feedback-textarea" placeholder="What happened, or what would you like to see?" rows="6"></textarea>
+      <div id="feedbackError" class="feedback-error" style="display:none">Add a few details before sending.</div>
+      <div class="feedback-context-note">Your app version and current screen are included automatically to help with debugging.</div>
+    </div>
+    <div class="feedback-panel-actions">
+      <button id="feedbackCancelBtn" class="feedback-cancel-btn" onclick="closeFeedbackModal()">Cancel</button>
+      <button id="feedbackSendBtn" class="feedback-send-btn" onclick="sendFeedback()">Send via Email →</button>
+    </div>
   </div>
 
 <!-- ══════════════════════════════════════════
