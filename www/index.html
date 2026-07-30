@@ -252,6 +252,33 @@ body::before {
   max-width: 700px;
 }
 
+/* ── ON-DEMAND MODULE TRANSLATION (via the same free Groq API as AI Coach) ── */
+.translate-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.translate-btn, .translate-revert-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.translate-btn:hover, .translate-revert-btn:hover { border-color: var(--amber); color: var(--amber); }
+.translate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.translate-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--cyan);
+}
+
 /* ── CARDS ── */
 .card {
   background: var(--surface);
@@ -2956,6 +2983,7 @@ document.getElementById('progressFill').style.width = Math.round((visitedSection
 <script src="assets/module-preview-data.js"></script>
 <script src="assets/enhance.js"></script>
 <script src="assets/license.js"></script>
+<script src="assets/translate.js"></script>
 <script src="assets/build-version.js"></script>
 <script src="assets/update-check.js"></script>
 <script>
