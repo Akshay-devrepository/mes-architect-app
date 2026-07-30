@@ -18,10 +18,12 @@
 //     the actual keys. It is gitignored. NEVER commit it, paste it into a
 //     public issue, or send it anywhere but directly to yourself.
 //
-// Re-running this script re-generates ALL keys (invalidating any already
-// sold!). To rotate a single module's key without touching the rest, this
-// script would need to be extended to read back existing keys first — as
-// shipped it always does a full fresh encryption of every locked module.
+// Re-running this script REUSES the bundle key and every individual key
+// already recorded in LICENSE-KEYS-SECRET.md, so editing a module's content
+// (then re-running this script to re-lock it) does NOT invalidate keys
+// you've already handed out. A fresh key is only ever generated for a
+// module index that has no existing entry (e.g. a newly-added locked
+// module), or for everything if LICENSE-KEYS-SECRET.md is missing/unreadable.
 // ══════════════════════════════════════════
 
 const fs = require('fs');
@@ -49,6 +51,22 @@ const PBKDF2_ITERATIONS = 100000;
 
 function randomKey(prefix) {
   return prefix + '-' + crypto.randomBytes(15).toString('base64url');
+}
+
+// Reads back whatever keys are already on file, so re-running this script
+// re-locks content without silently rotating keys someone may already have.
+function parseExistingKeys(mdText) {
+  const result = { bundleKey: null, moduleKeys: {} };
+
+  const bundleMatch = /## Bundle key[^\n]*\n\n`([^`]+)`/.exec(mdText);
+  if (bundleMatch) result.bundleKey = bundleMatch[1];
+
+  const moduleRe = /Module (\d+) — .+?\n`([^`]+)`/g;
+  let m;
+  while ((m = moduleRe.exec(mdText))) {
+    result.moduleKeys[parseInt(m[1], 10) - 1] = m[2]; // file is 1-based, LOCKED_MODULES is 0-based
+  }
+  return result;
 }
 
 function deriveAesKey(passphrase, saltBuf) {
@@ -96,7 +114,19 @@ function findBalancedDiv(html, openTagRegex, fromIndex) {
 
 function main() {
   let html = fs.readFileSync(INDEX_PATH, 'utf8');
-  const bundleKey = randomKey('MES-BUNDLE');
+
+  let existing = { bundleKey: null, moduleKeys: {} };
+  if (fs.existsSync(SECRETS_PATH)) {
+    try {
+      existing = parseExistingKeys(fs.readFileSync(SECRETS_PATH, 'utf8'));
+    } catch (e) {
+      console.log('Could not parse existing ' + SECRETS_PATH + ' — generating fresh keys for everything.');
+    }
+  }
+
+  const bundleKey = existing.bundleKey || randomKey('MES-BUNDLE');
+  console.log(existing.bundleKey ? 'Bundle key: reused existing.' : 'Bundle key: NEW (no existing key found).');
+
   const secretLines = [
     '# MES Architect — License Keys (SECRET — do not commit or share this file)',
     '',
@@ -128,7 +158,8 @@ function main() {
     const headerHtml = sectionInner.slice(0, header.outerEnd);
     const bodyHtml = sectionInner.slice(header.outerEnd);
 
-    const individualKey = randomKey('MES-M' + String(idx + 1).padStart(2, '0'));
+    const individualKey = existing.moduleKeys[idx] || randomKey('MES-M' + String(idx + 1).padStart(2, '0'));
+    const reusedIndividual = !!existing.moduleKeys[idx];
     const individualEnc = encrypt(bodyHtml, individualKey);
     const bundleEnc = encrypt(bodyHtml, bundleKey + '::sec-' + idx);
 
@@ -154,7 +185,7 @@ function main() {
     secretLines.push('`' + individualKey + '`');
     secretLines.push('');
 
-    console.log('Locked sec-' + idx + ' (' + MODULE_NAMES[idx] + ') — individual key generated');
+    console.log('Locked sec-' + idx + ' (' + MODULE_NAMES[idx] + ') — ' + (reusedIndividual ? 'reused existing key' : 'NEW key generated'));
   }
 
   fs.writeFileSync(INDEX_PATH, html, 'utf8');
