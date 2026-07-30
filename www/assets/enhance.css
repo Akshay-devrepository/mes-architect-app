@@ -711,6 +711,36 @@ body.feedback-open #feedbackPanel { opacity: 1; pointer-events: auto; transform:
   color: var(--red);
 }
 
+/* ── LOCKED-MODULE PREVIEW ("what's inside" topic teaser) ── */
+.locked-preview-topics {
+  text-align: left;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.locked-preview-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 8px;
+}
+.locked-preview-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.locked-preview-list li {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
 .locked-buy-row { margin-bottom: 16px; }
 .locked-buy-btn {
   display: inline-block;

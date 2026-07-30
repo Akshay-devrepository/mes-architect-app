@@ -348,6 +348,31 @@ function addGlobalLicenseUI() {
 // Inserts a "Buy Access" link (or a "contact the seller" fallback if no
 // link is configured for this module yet) into a still-locked gate, right
 // above the key-entry row.
+// "What's inside" teaser — a few genuine topic bullets pulled from the
+// module's real content (see module-preview-data.js), shown right after
+// the locked-desc paragraph so a prospective buyer sees real value before
+// hitting the buy button or key input. Anchored off .locked-desc (not the
+// input row) so it renders correctly regardless of whether addBuyLinkToGate
+// has already inserted its own row.
+function addPreviewTopicsToGate(gate) {
+  if (gate.querySelector('.locked-preview-topics')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const topics = window.MODULE_PREVIEW_TOPICS && window.MODULE_PREVIEW_TOPICS[idx];
+  if (!topics || !topics.length) return;
+
+  const descEl = gate.querySelector('.locked-desc');
+  if (!descEl) return;
+
+  const box = document.createElement('div');
+  box.className = 'locked-preview-topics';
+  box.innerHTML =
+    '<div class="locked-preview-label">🔍 What\'s inside</div>' +
+    '<ul class="locked-preview-list">' +
+      topics.map((t) => '<li>' + escapeHtml(t) + '</li>').join('') +
+    '</ul>';
+  descEl.insertAdjacentElement('afterend', box);
+}
+
 function addBuyLinkToGate(gate) {
   if (gate.querySelector('.locked-buy-row')) return;
   const idx = parseInt(gate.dataset.module, 10);
@@ -374,6 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (cache[idx]) revealModule(gate, cache[idx]);
   });
 
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addPreviewTopicsToGate);
   document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addBuyLinkToGate);
 
   // If a bundle key was validated before, auto-unlock anything still
