@@ -10,8 +10,8 @@
 // topic phrases, never full module content).
 // ══════════════════════════════════════════
 window.MODULE_PREVIEW_TOPICS = {
-  1: ['ISA-95 object models & levels', 'SAP–MES integration via ISA-95', 'B2MML markup', 'ISA-95/88 combined equipment hierarchy'],
-  2: ['Physical & procedural models', 'Recipe hierarchy', 'Batch execution flow', 'Pharma batch manufacturing example, end to end'],
+  1: ['ISA-95 object models & levels', 'The Level 3/4 boundary, worked example', 'Resource models with real field examples', 'Multi-site rollout: standardize vs localize'],
+  2: ['Physical & procedural models', 'All 4 recipe types, traced through one product', 'The state model: holds, restarts & exceptions', 'How ISA-88 connects to ISA-95'],
   3: ['All 15+ MES functional modules', 'Purpose, workflow & data for each', 'Integration points between modules', 'Interview-ready module explanations'],
   4: ['Enterprise tech stack decision guide', 'HA/DR design patterns & RTO/RPO targets', 'Multi-site architecture governance', 'Edge computing & event-driven design'],
   5: ['Migration readiness & the 6R framework', 'Cloud platform selection (Azure/AWS)', 'Zero-downtime data migration', 'GxP re-validation & cutover execution'],
