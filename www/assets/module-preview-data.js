@@ -20,7 +20,7 @@ window.MODULE_PREVIEW_TOPICS = {
   8: ['Discovery & requirements gathering', 'Configure-vs-customize decisions', 'Validation lifecycle (FAT/SAT/IQ/OQ/PQ)', 'Go-live, cutover & hypercare'],
   9: ['Pharma GxP & the deviation lifecycle', 'Automotive zero-defect traceability', 'F&B allergen & catch-weight discipline', 'Semiconductor SEMI standards'],
   10: ['30-day foundation sprint', '90-day architect-level plan', '6-month complete roadmap', 'Milestones & mock interview checkpoints'],
-  11: ['ISA-95/88 visual hierarchy trees', 'MES integration architecture map', 'Digital thread & digital twin flow', 'Manufacturing maturity journey'],
+  11: ['ISA-95/88 visual hierarchy trees', 'MES integration architecture map', 'Digital thread & digital twin flow', '3 real scenarios traced across every domain'],
   12: ['Business-first problem framing', 'Stakeholder communication matrix', 'Workshop facilitation playbook', 'Objection handling & client psychology'],
   13: ['Unified Namespace & MQTT Sparkplug B', 'AI & GenAI in manufacturing', 'Digital twin architecture', 'Manufacturing data fabric'],
   14: ['MES ↔ ERP integration deep dive', 'MES ↔ SCADA/OPC-UA/PLC deep dive', 'MES ↔ LIMS integration deep dive', 'MES ↔ Historian integration deep dive'],
