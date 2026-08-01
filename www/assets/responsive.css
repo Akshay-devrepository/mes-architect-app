@@ -143,7 +143,7 @@
 }
 .section *:not(.diagram):not(.diagram *),
 #sidebar *, .topbar *, #ai-chat-box .msg-bubble, .home-card * {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 /* overflow-wrap inherits, so excluding .diagram from the rule above isn't
    enough on its own — it still inherits "anywhere" from its parent and
@@ -226,16 +226,63 @@ body { font-size: clamp(12.5px, 3.4vw, 14px); }
      scroll instead of jumping straight to a fixed 12px at exactly 700px. */
   font-size: clamp(10px, 2.8vw, 13px);
 }
+
+/* ── RESPONSIVE TABLE -> CARD TRANSFORM (mobile + tablet) ──
+   A real <table> with 5-7 columns has nowhere near enough width on a
+   phone or tablet to stay readable — squeezing columns either forces
+   words to break mid-way (the bug this replaces) or makes a horizontal-
+   scroll table, which is hard to discover and awkward to read a row at
+   a time. Below 900px (this app's existing sidebar-collapse breakpoint,
+   reused here as the "compact" tier), each row instead becomes its own
+   card with label:value pairs stacked vertically — every column fits at
+   full width, nothing scrolls, nothing breaks. data-label attributes are
+   injected once per cell by wrapTables() in enhance.js, reading each
+   column's real <th> text so this needs no HTML content changes. */
+@media (max-width: 900px) {
+  .tbl-scroll { overflow-x: visible; }
+  .tbl-scroll table.tbl,
+  .tbl-scroll table.tbl thead,
+  .tbl-scroll table.tbl tbody,
+  .tbl-scroll table.tbl tr,
+  .tbl-scroll table.tbl th,
+  .tbl-scroll table.tbl td {
+    display: block;
+    width: auto !important;
+  }
+  .tbl-scroll table.tbl thead {
+    /* Visually hidden, not display:none — screen readers can still use it */
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tbl-scroll table.tbl tbody tr {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface2);
+  }
+  .tbl-scroll table.tbl tbody tr:last-child { margin-bottom: 0; }
+  .tbl-scroll table.tbl td {
+    padding: 6px 0 !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .tbl-scroll table.tbl td:last-child { border-bottom: none; }
+  .tbl-scroll table.tbl td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 3px;
+  }
+}
 @media (max-width: 700px) {
   .tbl th, .tbl td, .tbl-scroll th, .tbl-scroll td { padding: 6px 8px !important; }
-  /* .tbl's base width:100% (index.html) locks the table to its narrow
-     mobile container, so there's nothing left for .tbl-scroll's
-     overflow-x:auto to scroll — the only way left to avoid overflow is
-     breaking words mid-way (overflow-wrap:anywhere from the safety net
-     above). Letting the table size to its natural content width here
-     gives .tbl-scroll real horizontal scroll room instead, so cells
-     never need to shrink narrower than a word actually fits. */
-  .tbl-scroll table { width: max-content; min-width: 100%; }
 }
 
 /* ── ASCII-ART DIAGRAMS: same idea — shrink to fit before falling back to
