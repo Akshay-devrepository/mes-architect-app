@@ -28,6 +28,7 @@
     "sharp": "^0.35.3"
   },
   "dependencies": {
-    "@capacitor-community/speech-recognition": "^7.0.1"
+    "@capacitor-community/speech-recognition": "^7.0.1",
+    "@capacitor/app": "^8.1.1"
   }
 }

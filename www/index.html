@@ -1542,6 +1542,18 @@ code {
     </div>
   </div>
 
+  <!-- ══ EXIT CONFIRMATION — shown by the hardware back button handler
+       (see initHardwareBackButton below) only once in-app back navigation
+       is exhausted, instead of exiting immediately. Native app only. ══ -->
+  <div id="exitConfirmBackdrop" onclick="closeExitConfirm()"></div>
+  <div id="exitConfirmDialog">
+    <div class="exit-confirm-title">Exit MES Architect?</div>
+    <div class="exit-confirm-actions">
+      <button class="exit-confirm-cancel" onclick="closeExitConfirm()">Cancel</button>
+      <button class="exit-confirm-exit" onclick="confirmExitApp()">Exit</button>
+    </div>
+  </div>
+
 <!-- ══════════════════════════════════════════
      HOME — module picker
 ══════════════════════════════════════════ -->
@@ -2496,6 +2508,44 @@ function goBack() {
   history.back();
 }
 
+// ── HARDWARE BACK BUTTON (native Android app only) ──
+// Without this, Capacitor's BridgeActivity falls back to its own default
+// back-button handling — which, once there's no more WebView history to
+// step through (i.e. sitting on Home, the very first view), just exits
+// the app immediately with no confirmation. Registering this listener
+// hands control to this code instead: close whichever overlay is open
+// first, then fall back to in-app history navigation (which the existing
+// popstate listener above already handles), and only offer to actually
+// exit once both of those are exhausted.
+function openExitConfirm() {
+  document.body.classList.add('exit-confirm-open');
+}
+function closeExitConfirm() {
+  document.body.classList.remove('exit-confirm-open');
+}
+function confirmExitApp() {
+  if (window.capacitorApp && window.capacitorApp.App) window.capacitorApp.App.exitApp();
+}
+
+function initHardwareBackButton() {
+  const isNative = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+  if (!isNative || !window.capacitorApp || !window.capacitorApp.App) return;
+
+  window.capacitorApp.App.addListener('backButton', ({ canGoBack }) => {
+    if (document.body.classList.contains('exit-confirm-open')) { closeExitConfirm(); return; }
+    if (document.body.classList.contains('settings-open')) { closeSettingsPanel(); return; }
+    if (document.body.classList.contains('feedback-open')) { closeFeedbackModal(); return; }
+    if (document.body.classList.contains('search-open')) { closeSearchPanel(); return; }
+    if (document.body.classList.contains('sidebar-toggled')) { closeSidebar(); return; }
+
+    if (canGoBack) {
+      history.back();
+    } else {
+      openExitConfirm();
+    }
+  });
+}
+
 window.addEventListener('popstate', (e) => {
   const view = e.state ? e.state.mesView : 'home';
   suppressHistoryPush = true;
@@ -3089,18 +3139,20 @@ renderContinueCard();
 document.getElementById('progressFill').style.width = Math.round((visitedSections.size/totalSections)*100) + '%';
 </script>
 <!-- Vendored (no bundler in this project): @capacitor/core + the community
-     speech-recognition plugin's browser builds, copied verbatim from
-     node_modules. On the native Android app, window.Capacitor already
-     exists (auto-injected by the native bridge before this script runs)
-     and this setup call extends that same object instead of replacing it,
-     so the plugin correctly binds to the real native SpeechRecognizer. On
-     a plain website/PWA, no native bridge exists yet, so this creates a
-     "web" platform Capacitor object instead — isNativePlatform() reports
-     false there, which the voice-input code uses to fall back to the
-     browser's own SpeechRecognition API. Re-copy these two files from
-     node_modules if the packages are ever upgraded. -->
+     speech-recognition plugin + @capacitor/app's browser builds, copied
+     verbatim from node_modules. On the native Android app, window.Capacitor
+     already exists (auto-injected by the native bridge before this script
+     runs) and this setup call extends that same object instead of replacing
+     it, so each plugin correctly binds to its real native implementation
+     (SpeechRecognizer, hardware back button, exitApp). On a plain website/
+     PWA, no native bridge exists yet, so this creates a "web" platform
+     Capacitor object instead — isNativePlatform() reports false there,
+     which both the voice-input code and the back-button handler use to
+     fall back to browser-appropriate behavior. Re-copy these three files
+     from node_modules if the packages are ever upgraded. -->
 <script src="assets/vendor/capacitor.js"></script>
 <script src="assets/vendor/capacitor-speech-recognition.js"></script>
+<script src="assets/vendor/capacitor-app.js"></script>
 <script src="assets/quiz-data.js"></script>
 <script src="assets/glossary-data.js"></script>
 <script src="assets/module-preview-data.js"></script>
@@ -3115,6 +3167,10 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+// Runs here (not in the earlier INIT block) because window.capacitorApp
+// only exists once the vendor <script src> tags above have executed —
+// this inline block is the first point after that where it's safe to use.
+initHardwareBackButton();
 </script>
 </body>
 </html>

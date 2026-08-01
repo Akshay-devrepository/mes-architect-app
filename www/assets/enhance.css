@@ -646,6 +646,70 @@ body.settings-open #settingsPanel { opacity: 1; pointer-events: auto; transform:
 #updateCheckStatus { color: var(--cyan); margin-left: 4px; }
 #updateCheckVersion { color: var(--text-muted); opacity: 0.6; margin-top: 4px; font-size: 10px; }
 
+/* ── EXIT CONFIRMATION (hardware back button, native app only) ── */
+#exitConfirmBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,14,0.75);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 700;
+}
+#exitConfirmDialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -46%);
+  width: min(320px, 88vw);
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  padding: 22px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 701;
+}
+body.exit-confirm-open #exitConfirmBackdrop { opacity: 1; pointer-events: auto; }
+body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%); }
+.exit-confirm-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  margin-bottom: 18px;
+}
+.exit-confirm-actions { display: flex; gap: 10px; }
+.exit-confirm-cancel {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.exit-confirm-cancel:hover { color: var(--text); border-color: var(--text-dim); }
+.exit-confirm-exit {
+  flex: 1;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.exit-confirm-exit:hover { opacity: 0.9; }
+
 /* ── HOME NAV ITEM (sidebar) ── */
 .nav-item-home {
   font-family: var(--display);

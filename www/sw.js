@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mes-architect-v33';
+const CACHE_NAME = 'mes-architect-v34';
 const APP_SHELL = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const APP_SHELL = [
   './assets/update-check.js',
   './assets/vendor/capacitor.js',
   './assets/vendor/capacitor-speech-recognition.js',
+  './assets/vendor/capacitor-app.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
