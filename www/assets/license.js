@@ -241,6 +241,10 @@ function revealModule(gate, plaintext) {
   // on navigation, but a user can also unlock while already sitting on
   // this now-locked module without navigating away and back.
   if (gate.dataset.module === '16' && window.renderQuiz) window.renderQuiz();
+  // The translate controls were built once on page load and dimmed/disabled
+  // for whichever modules were still locked at that point — re-check now
+  // that this one just unlocked.
+  if (window.refreshTranslateLockUI) window.refreshTranslateLockUI(gate.dataset.module);
 }
 
 async function attemptUnlockModule(gate, keyInput) {
