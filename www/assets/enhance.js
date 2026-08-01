@@ -934,12 +934,31 @@ window.sendFeedback = sendFeedback;
 //    screens instead of forcing the whole page to scroll sideways ──
 function wrapTables() {
   document.querySelectorAll('.section table').forEach((table) => {
-    if (table.closest('.tbl-scroll')) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'tbl-scroll';
-    table.parentNode.insertBefore(wrap, table);
-    wrap.appendChild(table);
+    if (!table.closest('.tbl-scroll')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'tbl-scroll';
+      table.parentNode.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    }
+    addTableDataLabels(table);
   });
+}
+
+// Below 900px, responsive.css turns each row into a stacked label:value
+// card (content: attr(data-label) on each <td>) instead of either
+// breaking words mid-way or forcing horizontal scroll on a many-column
+// table. Reads each column's real <th> text so no HTML content needs
+// to change for this to work.
+function addTableDataLabels(table) {
+  if (table.dataset.labelsAdded) return;
+  const headers = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+  if (!headers.length) return;
+  table.querySelectorAll('tbody tr').forEach((row) => {
+    Array.from(row.children).forEach((cell, i) => {
+      if (headers[i]) cell.setAttribute('data-label', headers[i]);
+    });
+  });
+  table.dataset.labelsAdded = '1';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
