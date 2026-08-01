@@ -2427,12 +2427,19 @@ let suppressHistoryPush = false;
 function navState(view) { return { mesView: view }; }
 
 function showSection(index) {
+  // Guards against a bad/stale index (e.g. a history entry from a version
+  // with a different section count) crashing navigation instead of no-oping —
+  // without this, the lookup below throws mid-function, after .active has
+  // already been stripped from every section, leaving nothing shown at all.
+  const targetEl = document.getElementById('sec-' + index);
+  if (!targetEl) return;
+
   if (!suppressHistoryPush) history.pushState(navState(index), '');
 
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-  document.getElementById('sec-' + index).classList.add('active');
+  targetEl.classList.add('active');
   // Looked up by data-idx, not DOM position — nav-items can be reordered
   // in the sidebar (e.g. Glossary sits before Saved) without their index
   // still having to match their visual position in the list.
