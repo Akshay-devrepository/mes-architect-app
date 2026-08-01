@@ -62,9 +62,30 @@ function addTranslateControlsToModules() {
 
     box.querySelector('.translate-btn').addEventListener('click', () => translateModule(idx));
     box.querySelector('.translate-revert-btn').addEventListener('click', () => revertModuleTranslation(idx));
+    refreshTranslateLockUI(idx);
   }
 }
 window.addTranslateControlsToModules = addTranslateControlsToModules;
+
+// Keeps the translate controls looking (and behaving) consistent with every
+// other locked-module control on the page — dimmed/disabled until unlock,
+// instead of looking fully live and only failing after a click into
+// translateModule()'s own stillLocked check. Exposed so license.js's
+// revealModule() can call it again the moment a module unlocks mid-session,
+// since addTranslateControlsToModules() only ever builds each section's box
+// once (on page load).
+function refreshTranslateLockUI(idx) {
+  const section = document.getElementById('sec-' + idx);
+  const box = section && section.querySelector('.translate-controls');
+  if (!box) return;
+  const locked = !!section.querySelector('.locked-gate:not(.unlocked)');
+  const btn = box.querySelector('.translate-btn');
+  box.querySelector('.translate-lang-select').disabled = locked;
+  btn.disabled = locked;
+  btn.title = locked ? 'Unlock this module first, then translate it.' : '';
+  box.querySelector('.translate-status').textContent = locked ? '🔒 Unlock to translate' : '';
+}
+window.refreshTranslateLockUI = refreshTranslateLockUI;
 
 async function translateModule(idx) {
   const section = document.getElementById('sec-' + idx);
