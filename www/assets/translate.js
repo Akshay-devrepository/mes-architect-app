@@ -15,11 +15,31 @@ const TRANSLATE_LANGUAGES = [
   'Hindi', 'Mandarin Chinese', 'Japanese', 'Korean', 'Arabic'
 ];
 
+// Maps a browser/device locale's primary subtag (the "es" in "es-ES") to
+// one of the languages already offered above, so the dropdown starts on
+// whatever the device is already set to instead of always defaulting to
+// Spanish. Falls back to leaving the default selection alone (English
+// devices, or a locale not in the list above, e.g. English itself has no
+// entry since there's nothing to translate to).
+const DEVICE_LANGUAGE_MAP = {
+  es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', it: 'Italian',
+  hi: 'Hindi', zh: 'Mandarin Chinese', ja: 'Japanese', ko: 'Korean', ar: 'Arabic'
+};
+
+function detectDeviceTranslateDefault() {
+  const locale = (navigator.language || navigator.userLanguage || '').toLowerCase();
+  const primary = locale.split('-')[0];
+  const matched = DEVICE_LANGUAGE_MAP[primary];
+  return TRANSLATE_LANGUAGES.includes(matched) ? matched : null;
+}
+
 // sectionIdx -> Map(cardElement -> original innerHTML), so "Show Original"
 // can restore exactly what was there before translating.
 const translateOriginals = {};
 
 function addTranslateControlsToModules() {
+  const deviceDefault = detectDeviceTranslateDefault();
+
   for (let idx = 0; idx <= 15; idx++) {
     const section = document.getElementById('sec-' + idx);
     if (!section) continue;
@@ -30,7 +50,9 @@ function addTranslateControlsToModules() {
     box.className = 'translate-controls';
     box.innerHTML =
       '<select class="quiz-select translate-lang-select">' +
-        TRANSLATE_LANGUAGES.map((lang) => '<option value="' + lang + '">' + lang + '</option>').join('') +
+        TRANSLATE_LANGUAGES.map((lang) =>
+          '<option value="' + lang + '"' + (lang === deviceDefault ? ' selected' : '') + '>' + lang + '</option>'
+        ).join('') +
       '</select>' +
       '<button class="translate-btn">🌐 Translate</button>' +
       '<button class="translate-revert-btn" style="display:none">↺ Show Original</button>' +
