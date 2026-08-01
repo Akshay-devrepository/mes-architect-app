@@ -898,6 +898,22 @@ function closeFeedbackModal() {
 }
 window.closeFeedbackModal = closeFeedbackModal;
 
+// "Purchase Access" buttons call this when no real PURCHASE_LINKS URL is
+// configured yet for the module in question — instead of a dead-end
+// "coming soon" label, it opens the existing feedback flow pre-filled so
+// the click is genuinely actionable (requests a key from the seller)
+// rather than doing nothing.
+function requestPurchaseForModule(moduleTitle) {
+  openFeedbackModal();
+  const typeSelect = document.getElementById('feedbackType');
+  if (typeSelect) typeSelect.value = 'Purchase inquiry';
+  const textarea = document.getElementById('feedbackText');
+  if (textarea && !textarea.value) {
+    textarea.value = 'I\'d like to purchase access to "' + moduleTitle + '." Please send me a license key or a way to pay.';
+  }
+}
+window.requestPurchaseForModule = requestPurchaseForModule;
+
 function sendFeedback() {
   const type = document.getElementById('feedbackType').value;
   const text = document.getElementById('feedbackText').value.trim();

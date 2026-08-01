@@ -798,6 +798,7 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
 /* ── LOCKED HOME CARD BADGE ── */
 .home-card.locked { border-left: 3px solid var(--amber); }
 .home-card-locked { color: var(--amber); margin-left: 4px; }
+.home-card-unlocked { color: var(--green); margin-left: 4px; }
 
 /* ── PAID-MODULE LOCK GATE ── */
 .locked-gate {
@@ -892,6 +893,15 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
 }
 
 .locked-buy-row { margin-bottom: 16px; }
+/* .locked-buy-btn / .home-card-buy / .global-buy-link render as either an
+   <a> (real purchase link) or a <button> (no link configured yet — opens
+   the feedback flow instead) depending on PURCHASE_LINKS; this resets the
+   <button> defaults so both look identical regardless of element type. */
+button.locked-buy-btn, button.home-card-buy, button.global-buy-link {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
 .locked-buy-btn {
   display: inline-block;
   padding: 10px 20px;
@@ -990,22 +1000,6 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
 }
 .home-card-buy:hover { background: var(--amber2); color: #0b0f1a; }
 
-/* ── "COMING SOON" PURCHASE PLACEHOLDER (shared across home cards, locked
-     gates, and the global sidebar license panel) — shown instead of
-     silently rendering nothing, or a broken link, when no real store URL
-     is configured yet in PURCHASE_LINKS (license.js). ── */
-.coming-soon-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  background: var(--surface2);
-  border: 1px dashed var(--border2);
-  color: var(--text-muted);
-  border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-style: italic;
-}
-.home-card-coming-soon { margin-top: 8px; }
 
 /* ── CUSTOM SVG CONCEPT DIAGRAMS ──
    Inline (not <img src>) so they can reference the page's CSS custom
