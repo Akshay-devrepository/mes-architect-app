@@ -930,6 +930,74 @@ function sendFeedback() {
 }
 window.sendFeedback = sendFeedback;
 
+// ══════════════════════════════════════════
+// SETTINGS PANEL — text size control, plus the Feedback and Check-for-
+// updates entry points relocated here from separate standalone spots
+// (sidebar footer) so there's one place for "app-level" controls instead
+// of several scattered ones. Text size uses CSS zoom (not a rem/calc
+// rewrite) since almost every font-size in this app is an absolute px
+// value, not rem-relative — zoom scales all of it uniformly and is fully
+// supported in the Chromium WebView this app ships in, plus Chrome/Edge
+// on the web.
+// ══════════════════════════════════════════
+const TEXT_SCALE_KEY = 'mes_text_scale_v1';
+const TEXT_SCALE_MIN = 0.85;
+const TEXT_SCALE_MAX = 1.4;
+const TEXT_SCALE_STEP = 0.1;
+const TEXT_SCALE_DEFAULT = 1;
+
+function loadTextScale() {
+  const saved = parseFloat(localStorage.getItem(TEXT_SCALE_KEY));
+  return isNaN(saved) ? TEXT_SCALE_DEFAULT : saved;
+}
+function saveTextScale(v) { localStorage.setItem(TEXT_SCALE_KEY, String(v)); }
+
+let textScale = loadTextScale();
+
+function applyTextScale() {
+  document.documentElement.style.zoom = textScale;
+  const display = document.getElementById('textSizeDisplay');
+  if (display) display.textContent = Math.round(textScale * 100) + '%';
+}
+window.applyTextScale = applyTextScale;
+
+function increaseTextSize() {
+  textScale = Math.min(TEXT_SCALE_MAX, Math.round((textScale + TEXT_SCALE_STEP) * 100) / 100);
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.increaseTextSize = increaseTextSize;
+
+function decreaseTextSize() {
+  textScale = Math.max(TEXT_SCALE_MIN, Math.round((textScale - TEXT_SCALE_STEP) * 100) / 100);
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.decreaseTextSize = decreaseTextSize;
+
+function resetTextSize() {
+  textScale = TEXT_SCALE_DEFAULT;
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.resetTextSize = resetTextSize;
+
+function openSettingsPanel() {
+  applyTextScale(); // sync the % display in case this is the first time the panel's been opened
+  document.body.classList.add('settings-open');
+}
+window.openSettingsPanel = openSettingsPanel;
+
+// Applied immediately (not deferred to DOMContentLoaded) so a persisted
+// non-default scale is in effect before first paint, not after a flash
+// of default-sized content.
+applyTextScale();
+
+function closeSettingsPanel() {
+  document.body.classList.remove('settings-open');
+}
+window.closeSettingsPanel = closeSettingsPanel;
+
 // ── Wrap every table so a wide one scrolls inside itself on small
 //    screens instead of forcing the whole page to scroll sideways ──
 function wrapTables() {

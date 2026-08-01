@@ -95,6 +95,7 @@
   padding: 0;
 }
 .nav-icon-btn:hover { border-color: var(--amber); color: var(--amber); }
+.topbar-right-icons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 @media (max-width: 480px) {
   .topbar-left { gap: 6px; }
