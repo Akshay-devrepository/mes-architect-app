@@ -1500,6 +1500,7 @@ code {
         <option value="Bug report">🐞 Bug report</option>
         <option value="Feature idea">💡 Feature idea</option>
         <option value="General feedback">💬 General feedback</option>
+        <option value="Purchase inquiry">💳 Purchase inquiry</option>
       </select>
       <label class="feedback-field-label">Details</label>
       <textarea id="feedbackText" class="feedback-textarea" placeholder="What happened, or what would you like to see?" rows="6"></textarea>
@@ -2567,7 +2568,10 @@ function buildHomeCards() {
     const title = src.querySelector('.section-title').textContent;
     const desc = src.querySelector('.section-desc').textContent;
     const done = visitedSections.has(i);
-    const locked = !!secEl.querySelector('.locked-gate:not(.unlocked)');
+    const gateEl = secEl.querySelector('.locked-gate');
+    const isPaidModule = !!gateEl;
+    const locked = isPaidModule && !gateEl.classList.contains('unlocked');
+    const justUnlocked = isPaidModule && !locked;
     const buyLink = locked && window.purchaseLinkFor ? window.purchaseLinkFor(i) : null;
     const card = document.createElement('div');
     card.className = 'home-card' + (done ? ' done' : '') + (locked ? ' locked' : '');
@@ -2577,16 +2581,23 @@ function buildHomeCards() {
       '<div class="home-card-body">' +
         '<div class="home-card-tag">' + tag +
           (locked ? ' <span class="home-card-locked">🔒 locked</span>' : '') +
-          (!locked && done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
+          (justUnlocked ? ' <span class="home-card-unlocked">🔓 unlocked</span>' : '') +
+          (done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
         '<div class="home-card-title">' + title + '</div>' +
         '<div class="home-card-desc">' + desc + '</div>' +
-        (buyLink
-          ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Buy access</a>'
-          : (locked ? '<div class="coming-soon-badge home-card-coming-soon">🔜 Coming soon</div>' : '')) +
+        (locked
+          ? (buyLink
+              ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Purchase Access</a>'
+              : '<button class="home-card-buy home-card-buy-request" type="button">💳 Purchase Access</button>')
+          : '') +
       '</div>' +
       '<div class="home-card-arrow">→</div>';
-    if (buyLink) {
-      card.querySelector('.home-card-buy').addEventListener('click', (e) => e.stopPropagation());
+    const buyEl = card.querySelector('.home-card-buy');
+    if (buyEl) {
+      buyEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!buyLink && window.requestPurchaseForModule) window.requestPurchaseForModule(title);
+      });
     }
     grid.appendChild(card);
   }

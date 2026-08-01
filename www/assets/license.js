@@ -269,8 +269,23 @@ async function unlockAllWithKey(key) {
   for (const gate of gates) {
     await attemptUnlockModule(gate, key);
   }
+  refreshHomeIfActive();
 }
 window.unlockAllWithKey = unlockAllWithKey;
+
+// revealModule() already invalidates the Home card grid's cache
+// (grid.dataset.built = '0') on every unlock, but invalidating isn't the
+// same as re-rendering — if Home happens to be the screen currently on
+// screen (index null in the main script's currentSection), its cards
+// would otherwise keep showing stale locked/"coming soon" badges until
+// the user navigates away and back. currentSection/window.renderHome are
+// the main inline script's globals, reachable here since every script on
+// this page shares one global scope.
+function refreshHomeIfActive() {
+  if (typeof currentSection !== 'undefined' && currentSection === null && window.renderHome) {
+    window.renderHome();
+  }
+}
 
 async function tryUnlockGate(button) {
   const gate = button.closest('.locked-gate');
@@ -335,7 +350,7 @@ function addGlobalLicenseUI() {
   if (!footer || document.getElementById('globalLicenseRow')) return;
   const buyRow = PURCHASE_LINKS.bundle
     ? '<a class="global-buy-link" href="' + PURCHASE_LINKS.bundle + '" target="_blank" rel="noopener">💳 Get full access</a>'
-    : '<div class="coming-soon-badge">🔜 Purchasing coming soon</div>';
+    : '<button class="global-buy-link global-buy-request" type="button">💳 Purchase Full Access</button>';
   const row = document.createElement('div');
   row.id = 'globalLicenseRow';
   row.innerHTML =
@@ -348,6 +363,11 @@ function addGlobalLicenseUI() {
     '<div class="global-license-hint">Same key works on any device — just paste it again here.</div>' +
     '<div id="globalLicenseStatus" class="global-license-status"></div>';
   footer.appendChild(row);
+  if (!PURCHASE_LINKS.bundle) {
+    row.querySelector('.global-buy-request').addEventListener('click', () => {
+      if (window.requestPurchaseForModule) window.requestPurchaseForModule('the full MES Architect bundle');
+    });
+  }
 }
 
 // Inserts a "Buy Access" link (or a "contact the seller" fallback if no
@@ -382,13 +402,19 @@ function addBuyLinkToGate(gate) {
   if (gate.querySelector('.locked-buy-row')) return;
   const idx = parseInt(gate.dataset.module, 10);
   const link = purchaseLinkFor(idx);
+  const title = (typeof sectionTitles !== 'undefined' && sectionTitles[idx]) || ('Module ' + (idx + 1));
   const row = document.createElement('div');
   row.className = 'locked-buy-row';
   row.innerHTML = link
-    ? '<a class="locked-buy-btn" href="' + link + '" target="_blank" rel="noopener">💳 Buy access to this module</a>'
-    : '<div class="coming-soon-badge">🔜 Purchasing coming soon — already have a key? Enter it below.</div>';
+    ? '<a class="locked-buy-btn" href="' + link + '" target="_blank" rel="noopener">💳 Purchase Access to This Module</a>'
+    : '<button class="locked-buy-btn locked-buy-request" type="button">💳 Purchase Access to This Module</button>';
   const inputRow = gate.querySelector('.locked-input-row');
   gate.insertBefore(row, inputRow);
+  if (!link) {
+    row.querySelector('.locked-buy-request').addEventListener('click', () => {
+      if (window.requestPurchaseForModule) window.requestPurchaseForModule(title);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -416,4 +442,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // strip) runs before this one finishes restoring cached-unlocked modules
   // — refresh it now that the true unlock state actually exists.
   if (window.renderHomeStats) window.renderHomeStats();
+  // The Home card grid was already built once (by the main script's own
+  // synchronous INIT block, before this handler had restored anything from
+  // cache) — without this, a returning user whose modules were already
+  // unlocked in a previous session sees stale "locked"/"coming soon" home
+  // cards on launch until they navigate away and back.
+  refreshHomeIfActive();
 });

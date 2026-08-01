@@ -50,6 +50,7 @@ function addTranslateControlsToModules() {
     box.className = 'translate-controls';
     box.innerHTML =
       '<select class="quiz-select translate-lang-select">' +
+        '<option value=""' + (deviceDefault ? '' : ' selected') + '>🌐 Choose a language…</option>' +
         TRANSLATE_LANGUAGES.map((lang) =>
           '<option value="' + lang + '"' + (lang === deviceDefault ? ' selected' : '') + '>' + lang + '</option>'
         ).join('') +
@@ -88,6 +89,10 @@ async function translateModule(idx) {
   }
 
   const language = section.querySelector('.translate-lang-select').value;
+  if (!language) {
+    statusEl.textContent = 'Pick a language first.';
+    return;
+  }
   if (!translateOriginals[idx]) translateOriginals[idx] = new Map();
   const originals = translateOriginals[idx];
 
