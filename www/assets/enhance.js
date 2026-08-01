@@ -787,7 +787,14 @@ function closeSearchPanel() {
 window.closeSearchPanel = closeSearchPanel;
 
 function updateSearchCoverage() {
-  const lockedCount = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
+  // Scoped to sec-0..sec-15 (the 16 content modules this stat is about) —
+  // not a blanket .locked-gate query, which would also pick up Module 17's
+  // (Mock Interview & Quiz Mode) own separate gate and undercount by one
+  // for as long as that module specifically stays locked.
+  let lockedCount = 0;
+  for (let i = 0; i < TOTAL_CONTENT_MODULES; i++) {
+    if (document.querySelector('#sec-' + i + ' .locked-gate:not(.unlocked)')) lockedCount++;
+  }
   const unlockedModules = TOTAL_CONTENT_MODULES - lockedCount;
   const el = document.getElementById('searchCoverage');
   if (!el) return;
