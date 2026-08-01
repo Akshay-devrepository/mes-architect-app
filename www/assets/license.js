@@ -335,7 +335,7 @@ function addGlobalLicenseUI() {
   if (!footer || document.getElementById('globalLicenseRow')) return;
   const buyRow = PURCHASE_LINKS.bundle
     ? '<a class="global-buy-link" href="' + PURCHASE_LINKS.bundle + '" target="_blank" rel="noopener">💳 Get full access</a>'
-    : '';
+    : '<div class="coming-soon-badge">🔜 Purchasing coming soon</div>';
   const row = document.createElement('div');
   row.id = 'globalLicenseRow';
   row.innerHTML =
@@ -386,7 +386,7 @@ function addBuyLinkToGate(gate) {
   row.className = 'locked-buy-row';
   row.innerHTML = link
     ? '<a class="locked-buy-btn" href="' + link + '" target="_blank" rel="noopener">💳 Buy access to this module</a>'
-    : '<div class="locked-buy-fallback">No purchase link set up yet — contact the seller for a license key.</div>';
+    : '<div class="coming-soon-badge">🔜 Purchasing coming soon — already have a key? Enter it below.</div>';
   const inputRow = gate.querySelector('.locked-input-row');
   gate.insertBefore(row, inputRow);
 }

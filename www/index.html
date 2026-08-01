@@ -2580,7 +2580,9 @@ function buildHomeCards() {
           (!locked && done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
         '<div class="home-card-title">' + title + '</div>' +
         '<div class="home-card-desc">' + desc + '</div>' +
-        (buyLink ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Buy access</a>' : '') +
+        (buyLink
+          ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Buy access</a>'
+          : (locked ? '<div class="coming-soon-badge home-card-coming-soon">🔜 Coming soon</div>' : '')) +
       '</div>' +
       '<div class="home-card-arrow">→</div>';
     if (buyLink) {

@@ -905,11 +905,6 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
   cursor: pointer;
 }
 .locked-buy-btn:hover { background: var(--amber2); }
-.locked-buy-fallback {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  font-style: italic;
-}
 
 @media (max-width: 480px) {
   .locked-gate { padding: 22px 16px; }
@@ -994,6 +989,23 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
   text-decoration: none;
 }
 .home-card-buy:hover { background: var(--amber2); color: #0b0f1a; }
+
+/* ── "COMING SOON" PURCHASE PLACEHOLDER (shared across home cards, locked
+     gates, and the global sidebar license panel) — shown instead of
+     silently rendering nothing, or a broken link, when no real store URL
+     is configured yet in PURCHASE_LINKS (license.js). ── */
+.coming-soon-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--surface2);
+  border: 1px dashed var(--border2);
+  color: var(--text-muted);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-style: italic;
+}
+.home-card-coming-soon { margin-top: 8px; }
 
 /* ── GLOSSARY ── */
 .glossary-search {
