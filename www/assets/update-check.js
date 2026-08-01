@@ -67,15 +67,17 @@
   }
 
   function addManualCheckLink() {
-    const footer = document.getElementById('sidebarFooter');
-    if (!footer) return;
+    const mount = document.getElementById('settingsUpdateMount');
+    if (!mount) return;
+    const section = document.getElementById('settingsUpdateSection');
+    if (section) section.style.display = '';
     const row = document.createElement('div');
     row.id = 'updateCheckRow';
     row.innerHTML =
       '<span id="updateCheckLink">Check for updates</span>' +
       ' <span id="updateCheckStatus"></span>' +
       '<div id="updateCheckVersion">v' + escapeHtml(window.APP_VERSION_NAME || '') + '</div>';
-    footer.appendChild(row);
+    mount.appendChild(row);
 
     document.getElementById('updateCheckLink').addEventListener('click', () => {
       const status = document.getElementById('updateCheckStatus');

@@ -421,30 +421,8 @@
   #updateNowBtn, #updateLaterBtn { flex: 1; }
 }
 
-/* ── MANUAL "CHECK FOR UPDATES" (sidebar footer, native app only) ── */
-#updateCheckRow {
-  margin-top: 10px;
-  font-family: var(--mono);
-  font-size: 10px;
-}
-#updateCheckLink {
-  color: var(--text-muted);
-  text-decoration: underline;
-  cursor: pointer;
-}
-#updateCheckLink:hover { color: var(--amber); }
-#updateCheckStatus { color: var(--cyan); margin-left: 4px; }
-#updateCheckVersion { color: var(--text-muted); opacity: 0.6; margin-top: 3px; }
 
 /* ── FEEDBACK / REPORT ISSUE (sidebar footer link + modal) ── */
-#feedbackRow {
-  margin-top: 10px;
-  font-family: var(--mono);
-  font-size: 10px;
-}
-#feedbackLink { color: var(--text-muted); text-decoration: underline; cursor: pointer; }
-#feedbackLink:hover { color: var(--amber); }
-
 #feedbackBackdrop {
   position: fixed;
   inset: 0;
@@ -559,6 +537,114 @@ body.feedback-open #feedbackPanel { opacity: 1; pointer-events: auto; transform:
   cursor: pointer;
 }
 .feedback-send-btn:hover { background: var(--amber2); }
+
+/* ── SETTINGS PANEL (text size, feedback link, update check) ── */
+#settingsBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,14,0.7);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 600;
+}
+#settingsPanel {
+  position: fixed;
+  top: 10vh;
+  left: 50%;
+  transform: translate(-50%, -12px);
+  width: min(420px, 92vw);
+  max-height: 76vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 601;
+}
+body.settings-open #settingsBackdrop { opacity: 1; pointer-events: auto; }
+body.settings-open #settingsPanel { opacity: 1; pointer-events: auto; transform: translate(-50%, 0); }
+
+.settings-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.settings-panel-title { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); }
+#settingsCloseBtn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+}
+#settingsCloseBtn:hover { border-color: var(--amber); color: var(--amber); }
+
+.settings-panel-body { padding: 6px 18px 18px; }
+.settings-section { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-section:last-child { border-bottom: none; }
+.settings-section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.settings-link { color: var(--text-dim); font-size: 13px; cursor: pointer; }
+.settings-link:hover { color: var(--amber); }
+
+.text-size-row { display: flex; align-items: center; gap: 10px; }
+.text-size-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.text-size-btn:hover { border-color: var(--amber); color: var(--amber); }
+.text-size-display {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text);
+  min-width: 44px;
+  text-align: center;
+}
+.text-size-reset {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.text-size-reset:hover { color: var(--amber); }
+
+/* "App Updates" section only shows (see settingsUpdateSection in index.html)
+   once update-check.js populates it — native app builds only. */
+#updateCheckRow { font-family: var(--mono); font-size: 11px; }
+#updateCheckLink { color: var(--text-dim); text-decoration: underline; cursor: pointer; }
+#updateCheckLink:hover { color: var(--amber); }
+#updateCheckStatus { color: var(--cyan); margin-left: 4px; }
+#updateCheckVersion { color: var(--text-muted); opacity: 0.6; margin-top: 4px; font-size: 10px; }
 
 /* ── HOME NAV ITEM (sidebar) ── */
 .nav-item-home {

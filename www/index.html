@@ -1444,7 +1444,6 @@ code {
 
   <div class="sidebar-footer" id="sidebarFooter">
     <div class="level-badge">▲ ARCHITECT TRACK</div>
-    <div id="feedbackRow"><span id="feedbackLink" onclick="openFeedbackModal()">💬 Feedback / Report an issue</span></div>
   </div>
 </nav>
 
@@ -1463,7 +1462,10 @@ code {
         <div class="topbar-section" id="topbarTitle">Home</div>
       </div>
     </div>
-    <button id="searchToggleBtn" class="nav-icon-btn" onclick="openSearchPanel()" title="Search" aria-label="Search">🔍</button>
+    <div class="topbar-right-icons">
+      <button id="searchToggleBtn" class="nav-icon-btn" onclick="openSearchPanel()" title="Search" aria-label="Search">🔍</button>
+      <button id="settingsToggleBtn" class="nav-icon-btn" onclick="openSettingsPanel()" title="Settings" aria-label="Settings">⚙️</button>
+    </div>
     <div class="topbar-controls" id="topbarSectionControls" style="display:none">
       <button class="btn-sm" onclick="prevSection()">← <span class="btn-label">PREV</span></button>
       <button class="btn-sm" onclick="nextSection()"><span class="btn-label">NEXT</span> →</button>
@@ -1507,6 +1509,36 @@ code {
     <div class="feedback-panel-actions">
       <button id="feedbackCancelBtn" class="feedback-cancel-btn" onclick="closeFeedbackModal()">Cancel</button>
       <button id="feedbackSendBtn" class="feedback-send-btn" onclick="sendFeedback()">Send via Email →</button>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS PANEL — one place for text size, feedback, and update
+       checks, instead of separate standalone controls scattered across
+       the topbar/sidebar. ══ -->
+  <div id="settingsBackdrop" onclick="closeSettingsPanel()"></div>
+  <div id="settingsPanel">
+    <div class="settings-panel-header">
+      <div class="settings-panel-title">⚙️ Settings</div>
+      <button id="settingsCloseBtn" onclick="closeSettingsPanel()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-panel-body">
+      <div class="settings-section">
+        <div class="settings-section-label">Text Size</div>
+        <div class="text-size-row">
+          <button id="textSizeDecBtn" class="text-size-btn" onclick="decreaseTextSize()" title="Decrease text size" aria-label="Decrease text size">A−</button>
+          <span id="textSizeDisplay" class="text-size-display">100%</span>
+          <button id="textSizeIncBtn" class="text-size-btn" onclick="increaseTextSize()" title="Increase text size" aria-label="Increase text size">A+</button>
+          <span id="textSizeResetBtn" class="text-size-reset" onclick="resetTextSize()">Reset</span>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-label">Feedback</div>
+        <div class="settings-link" onclick="closeSettingsPanel(); openFeedbackModal();">💬 Feedback / Report an issue</div>
+      </div>
+      <div class="settings-section" id="settingsUpdateSection" style="display:none">
+        <div class="settings-section-label">App Updates</div>
+        <div id="settingsUpdateMount"></div>
+      </div>
     </div>
   </div>
 
