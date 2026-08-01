@@ -228,6 +228,14 @@ body { font-size: clamp(12.5px, 3.4vw, 14px); }
 }
 @media (max-width: 700px) {
   .tbl th, .tbl td, .tbl-scroll th, .tbl-scroll td { padding: 6px 8px !important; }
+  /* .tbl's base width:100% (index.html) locks the table to its narrow
+     mobile container, so there's nothing left for .tbl-scroll's
+     overflow-x:auto to scroll — the only way left to avoid overflow is
+     breaking words mid-way (overflow-wrap:anywhere from the safety net
+     above). Letting the table size to its natural content width here
+     gives .tbl-scroll real horizontal scroll room instead, so cells
+     never need to shrink narrower than a word actually fits. */
+  .tbl-scroll table { width: max-content; min-width: 100%; }
 }
 
 /* ── ASCII-ART DIAGRAMS: same idea — shrink to fit before falling back to
