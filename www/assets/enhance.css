@@ -1007,6 +1007,21 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
 }
 .home-card-coming-soon { margin-top: 8px; }
 
+/* ── CUSTOM SVG CONCEPT DIAGRAMS ──
+   Inline (not <img src>) so they can reference the page's CSS custom
+   properties directly for fill/stroke, keeping them theme-consistent
+   with zero extra asset files or HTTP requests. width:100% + the SVG's
+   own viewBox handles responsive scaling down to phone width. */
+.svg-diagram-wrap {
+  max-width: 640px;
+  margin: 0 auto 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+}
+.svg-diagram-wrap svg { width: 100%; height: auto; display: block; }
+
 /* ── GLOSSARY ── */
 .glossary-search {
   width: 100%;
