@@ -44,7 +44,7 @@ window.purchaseLinkFor = purchaseLinkFor;
 // Keygen's response only after a valid check, never embedded in this file
 // or shown to the buyer directly. Leave blank to skip Keygen entirely and
 // only accept raw passphrases (today's behavior).
-const KEYGEN_ACCOUNT_ID = '';
+const KEYGEN_ACCOUNT_ID = 'baf65a1d-0b72-4855-a1ab-34ca39421b88';
 
 const KEYGEN_ERROR_MESSAGES = {
   NOT_FOUND: null, // not a recognized Keygen key — caller falls back to raw-passphrase
