@@ -130,13 +130,22 @@ during development), for free at low volume.
    - `strict`: `true` (the limit is silently **not enforced** without this)
    - `overageStrategy`: `NO_OVERAGE` (this is the default — just don't
      change it to one of the "allow overage" options)
+
+   Or skip steps 2-3 of the dashboard clicking: `node scripts/keygen-setup.js`
+   creates this exact policy for you (with `KEYGEN_ACCOUNT_ID` and an
+   admin/environment `KEYGEN_API_TOKEN` set as env vars — see the script's
+   header comment). Safe to re-run; it reuses the existing product/policy
+   instead of duplicating them.
 3. For each sale, create a License under that policy and set its
    `metadata.unlockKey` to the matching key from `LICENSE-KEYS-SECRET.md`
    (a single module's key for an individual sale, the bundle key for a
    bundle sale). Keygen auto-generates the license key string — that's what
    you deliver to the buyer (via Gumroad/LemonSqueezy's receipt/delivery
    content, same as below, just with a Keygen-issued key instead of a raw
-   passphrase).
+   passphrase). Or run `node scripts/keygen-issue-license.js 2` (module 2)
+   / `node scripts/keygen-issue-license.js bundle` — same env vars as
+   above, run once per sale, never reuse one Keygen key across two buyers
+   (they'd share a single 2-device pool instead of each getting their own).
 4. Put your Keygen account ID (the slug in your dashboard URL — public, not
    a secret) into `KEYGEN_ACCOUNT_ID` at the top of
    `www/assets/license.js`, then redeploy.
