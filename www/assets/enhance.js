@@ -685,6 +685,38 @@ function renderGlossaryList(query) {
 window.renderGlossary = renderGlossary;
 
 // ══════════════════════════════════════════
+// STUDY STREAKS — a calendar-day counter, incremented at most once per day
+// by any real navigation (see showSection() in the main inline script).
+// Deliberately keyed by date strings, not elapsed milliseconds — studying
+// at 11pm and again at 1am the next calendar day is still "yesterday then
+// today" for streak purposes, not a 2-hour gap.
+// ══════════════════════════════════════════
+const STREAK_KEY = 'mes_streak_v1';
+
+function dateStringDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function loadStreak() {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) || { current: 0, longest: 0, lastActiveDate: null }; }
+  catch (e) { return { current: 0, longest: 0, lastActiveDate: null }; }
+}
+function saveStreak(s) { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); }
+
+function recordStudyActivity() {
+  const streak = loadStreak();
+  const today = dateStringDaysAgo(0);
+  if (streak.lastActiveDate === today) return; // already counted today
+  streak.current = (streak.lastActiveDate === dateStringDaysAgo(1)) ? streak.current + 1 : 1;
+  streak.longest = Math.max(streak.longest, streak.current);
+  streak.lastActiveDate = today;
+  saveStreak(streak);
+}
+window.recordStudyActivity = recordStudyActivity;
+
+// ══════════════════════════════════════════
 // PROGRESS DASHBOARD — reads data every other feature already collects
 // (visited sections, the quiz schedule, bookmarks) rather than tracking
 // anything new, plus a per-module quiz breakdown using each card's SM-2
@@ -697,6 +729,7 @@ function computeProgressStats() {
   const learned = deck.filter((c) => schedule[c.id] && schedule[c.id].reps > 0).length;
   const due = deck.filter((c) => isDue(schedule, c.id)).length;
   const bookmarkCount = Object.keys(loadBookmarks()).length;
+  const streak = loadStreak();
 
   const perModule = {};
   let extraTotal = 0, extraAttempted = 0;
@@ -713,14 +746,15 @@ function computeProgressStats() {
     }
   });
 
-  return { contentModulesVisited, learned, due, bookmarkCount, deckSize: deck.length, perModule, extraTotal, extraAttempted };
+  return { contentModulesVisited, learned, due, bookmarkCount, deckSize: deck.length, perModule, extraTotal, extraAttempted, streakCurrent: streak.current, streakLongest: streak.longest };
 }
 
 function homeStatsHtml(stats) {
   return '<div class="home-stat"><div class="home-stat-value">' + stats.contentModulesVisited + '/16</div><div class="home-stat-label">Modules visited</div></div>' +
     '<div class="home-stat"><div class="home-stat-value">' + stats.learned + '/' + stats.deckSize + '</div><div class="home-stat-label">Quiz cards learned</div></div>' +
     '<div class="home-stat"><div class="home-stat-value">' + stats.due + '</div><div class="home-stat-label">Due today</div></div>' +
-    '<div class="home-stat"><div class="home-stat-value">' + stats.bookmarkCount + '</div><div class="home-stat-label">Bookmarks</div></div>';
+    '<div class="home-stat"><div class="home-stat-value">' + stats.bookmarkCount + '</div><div class="home-stat-label">Bookmarks</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + (stats.streakCurrent > 0 ? '🔥 ' + stats.streakCurrent : stats.streakCurrent) + '</div><div class="home-stat-label">Day streak</div></div>';
 }
 
 function renderHomeStats() {
@@ -766,6 +800,9 @@ function renderProgress() {
 
   root.innerHTML =
     '<div class="home-stats-row">' + homeStatsHtml(stats) + '</div>' +
+    (stats.streakLongest > 0
+      ? '<div class="progress-extra-note">🔥 Best streak so far: ' + stats.streakLongest + ' day' + (stats.streakLongest === 1 ? '' : 's') + '.</div>'
+      : '') +
     '<div class="progress-section-title">Per-module quiz performance</div>' +
     '<div class="progress-table">' +
       '<div class="progress-row progress-row-head"><div>Module</div><div>Quiz cards</div><div>Status</div></div>' +
