@@ -1118,9 +1118,4 @@ document.addEventListener('DOMContentLoaded', () => {
   // this file — but this file loads after the INIT block that first shows
   // Home, so that first render needs to happen here instead.
   renderHomeStats();
-  // Voice I/O for the AI Coach (defined in the main inline script). This
-  // file loads after the vendored Capacitor + speech-recognition scripts,
-  // so window.Capacitor/window.capacitorSpeechRecognition are ready by now.
-  if (window.updateVoiceOutButton) window.updateVoiceOutButton();
-  if (window.initVoiceInput) window.initVoiceInput();
 });
