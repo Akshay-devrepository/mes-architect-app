@@ -1961,6 +1961,32 @@ const sectionTitles = [
 ];
 const HOME_ICONS = ['🗺️','🏭','📐','⚗️','🧩','🏗️','🧠','🏛️','☁️','🗄️','🔗','⚡','🤖','🚀','🎓','🎯','🃏','⭐','📖','📊'];
 
+// ── STALE LOCAL-STATE GUARD ──
+// visitedSections, the "continue where you left off" index, and the quiz
+// spaced-repetition schedule are all keyed by a module's POSITION (index),
+// not by what the content actually is. Reordering modules, or inserting new
+// quiz questions anywhere but the very end of the deck, silently reattaches
+// that local state to different content than the user actually saw — e.g.
+// a bundle of quiz ratings that shift onto unrelated questions, or a
+// "resume" card that reopens a completely different module than the one
+// last read. Bump CONTENT_VERSION any time either of those happens; on
+// mismatch (including a pre-existing install that predates this guard
+// entirely, i.e. no stored version at all) the affected keys are wiped
+// once so they rebuild cleanly from actual future use, rather than silently
+// misattributing old data to new content. Text size, unlock state, and the
+// Keygen device fingerprint are untouched — none of those are position-based.
+const CONTENT_VERSION = 2; // bump whenever module order or mid-deck quiz question positions change
+const CONTENT_VERSION_KEY = 'mes_content_version_v1';
+(function guardStaleLocalState() {
+  const stored = parseInt(localStorage.getItem(CONTENT_VERSION_KEY), 10);
+  if (stored === CONTENT_VERSION) return;
+  localStorage.removeItem('mes_visited_sections_v1');
+  localStorage.removeItem('mes_last_section_v1');
+  localStorage.removeItem('mes_quiz_schedule_v2');
+  localStorage.removeItem('mes_bookmarks_v1');
+  localStorage.setItem(CONTENT_VERSION_KEY, String(CONTENT_VERSION));
+})();
+
 // Persisted so "modules visited" survives a reload instead of resetting to
 // zero every time — this was a real, pre-existing bug (visitedSections was
 // only ever an in-memory Set) that the Progress Dashboard would otherwise
@@ -2053,6 +2079,7 @@ function showSection(index) {
     saveVisitedSections(visitedSections);
   }
   saveLastSection(index);
+  if (window.recordStudyActivity) window.recordStudyActivity();
 
   // The floating Ask AI launcher jumps into this exact chat — redundant
   // (and visually overlapping the chat box) once you're already there.
