@@ -7,7 +7,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **16 concept modules** — ISA-95, ISA-88, MES functional modules, enterprise architecture, cloud migration, database design, implementation lifecycle, industry-specific MES, AI in manufacturing, and more.
 - **★ Bookmarks** — star any concept card or interview question; revisit them all from the **Saved** tab.
 - **Quiz Mode** — every "Show Consultant Answer" question on the board, plus a hand-written set of calculation drills, acronym checks, and compare/contrast cards, turned into a flip-card deck. Rate yourself after each card; unmastered ones resurface until you get them.
-- **AI doubt-solver** — an interactive chat coach built into Module 8 ("AI Interview Coach," a paid module) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free to run with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below. The floating "ASK AI" button jumps straight there, showing the license gate if it isn't unlocked yet.
+- **AI doubt-solver** — an interactive chat coach built into Module 16 ("AI Interview Coach," a paid module) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free to run with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below. The floating "ASK AI" button jumps straight there, showing the license gate if it isn't unlocked yet.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
 - **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
 - **Licensed modules** — module 1 is a free trial; modules 2–16 are encrypted and unlock with a license key, sold per-module or as a full bundle. See "Selling licensed access" below.
@@ -290,13 +290,13 @@ Two layers, per the brief this was built to:
    "quality") gets refused by the model itself if it isn't really about
    manufacturing, per the strict scope rules baked into the prompt.
 
-The interactive chat itself lives inside Module 8 ("AI Interview Coach")
+The interactive chat itself lives inside Module 16 ("AI Interview Coach")
 and is part of that paid module, same as its written content (question
 banks, coaching frameworks) — the floating "ASK AI" button and sidebar/Home
-links to it all just navigate to Module 8, showing the license gate there
+links to it all just navigate to Module 16, showing the license gate there
 if it isn't unlocked. (An earlier iteration pulled the chat out into a free
 global overlay reachable from anywhere; that was reverted — the chat is
-part of what Module 8 buyers pay for.)
+part of what Module 16 buyers pay for.)
 
 ## Adding new content or quiz cards
 

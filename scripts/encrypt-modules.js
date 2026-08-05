@@ -44,12 +44,12 @@ const SECRETS_PATH = path.join(ROOT, 'LICENSE-KEYS-SECRET.md');
 const LOCKED_MODULES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 const MODULE_NAMES = [
-  'MES Industry Overview', 'ISA-95 Deep Dive', 'ISA-88 Batch Control',
-  'MES Functional Modules', 'Enterprise Architecture', 'Cloud Migration',
-  'Database & Data Models', 'AI Interview Coach', 'Implementation Lifecycle',
-  'Industry-Specific MES', 'Learning Roadmap', 'Concept Visualizations',
-  'Consultant Mindset', 'Advanced Topics', 'MES Integration Deep Dive',
-  'AI in Manufacturing', 'Mock Interview & Quiz Mode'
+  'Learning Roadmap', 'MES Industry Overview', 'ISA-95 Deep Dive',
+  'ISA-88 Batch Control', 'MES Functional Modules', 'Industry-Specific MES',
+  'Concept Visualizations', 'Enterprise Architecture', 'Cloud Migration',
+  'Database & Data Models', 'MES Integration Deep Dive', 'Advanced Topics',
+  'AI in Manufacturing', 'Implementation Lifecycle', 'Consultant Mindset',
+  'AI Interview Coach', 'Mock Interview & Quiz Mode'
 ];
 
 const PBKDF2_ITERATIONS = 100000;

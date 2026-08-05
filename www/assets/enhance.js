@@ -421,7 +421,7 @@ function renderPracticeQuiz(root) {
 // ══════════════════════════════════════════
 // MOCK INTERVIEW MODE — a timed, one-question-at-a-time session pulled from
 // the same quiz deck, grouped by tag ("track") rather than by module, since
-// nearly all quizzable cards live under Module 8's own sub-tags (RECRUITER,
+// nearly all quizzable cards live under Module 16's own sub-tags (RECRUITER,
 // HIRING MANAGER, TECHNICAL PANEL, OEE DRILL, etc.) rather than spread across
 // modules. Ratings feed the same SM-2 schedule as Practice mode, so a mock
 // session strengthens the one shared memory model instead of forking a
