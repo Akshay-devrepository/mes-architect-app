@@ -108,7 +108,7 @@ function injectStars() {
       section: sec,
       title: qText ? qText.textContent.trim() : ('Question ' + id),
       label: label ? label.textContent.trim() : '',
-      snippet: truncate(aText ? aText.textContent : '', 140)
+      snippet: truncate(aText ? htmlToPlainText(aText.innerHTML) : '', 140)
     };
     box.appendChild(makeStarBtn(id, meta));
   });
@@ -260,6 +260,28 @@ function nextDueInWords(schedule, deck) {
   return days <= 1 ? 'tomorrow' : 'in ' + days + ' days';
 }
 
+// Answers are structured HTML (<p>/<ul>/<li>/<strong>) so they read well
+// in the module itself, but .a-text starts as display:none until the user
+// clicks "Show Answer" — .innerText (which would otherwise add sensible
+// line breaks between block elements) returns empty for hidden elements,
+// so plain .textContent is the only DOM API that reliably works here
+// regardless of toggle state. It just concatenates text nodes with no
+// separator, which runs list items and paragraphs together with no space
+// ("...missed step)OOS (Out of Specification)...") — inserting a space
+// after each block tag's closing tag before stripping markup fixes that
+// for the plain-text flip-card view without touching the rendered HTML.
+function htmlToPlainText(html) {
+  return html
+    .replace(/<\/(p|div|h[1-6])>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function buildQuizDeck() {
   if (quizDeck) return quizDeck;
   const deck = [];
@@ -279,7 +301,7 @@ function buildQuizDeck() {
       section: sectionIndexOf(box),
       tag: label ? label.textContent.replace(/^\/\/\s*/, '').trim() : 'Concept Board',
       q: qText.textContent.trim(),
-      a: aText.textContent.trim()
+      a: htmlToPlainText(aText.innerHTML)
     });
   });
 

@@ -153,7 +153,7 @@
   text-transform: uppercase;
   margin-bottom: 12px;
 }
-.flip-face-text { font-size: 15px; color: var(--text); line-height: 1.6; }
+.flip-face-text { font-size: 15px; color: var(--text); line-height: 1.6; white-space: pre-line; }
 .flip-hint {
   text-align: center;
   font-family: var(--mono);
@@ -253,7 +253,7 @@
   text-transform: uppercase;
   margin-bottom: 12px;
 }
-.mock-question-text { font-size: 15px; color: var(--text); line-height: 1.6; }
+.mock-question-text { font-size: 15px; color: var(--text); line-height: 1.6; white-space: pre-line; }
 .mock-hint {
   text-align: center;
   font-family: var(--mono);
@@ -278,7 +278,7 @@
   text-transform: uppercase;
   margin-bottom: 12px;
 }
-.mock-answer-text { font-size: 15px; color: var(--text); line-height: 1.6; }
+.mock-answer-text { font-size: 15px; color: var(--text); line-height: 1.6; white-space: pre-line; }
 .mock-rate-row { max-width: 640px; margin: 0 auto 18px; }
 .quiz-rate-btn.partial:hover { border-color: var(--amber); color: var(--amber); }
 .mock-exit-btn {
