@@ -464,10 +464,20 @@ body::before {
 }
 #ai-chat-box.maximized {
   position: fixed;
+  /* inset:0 + width/height:auto lets a fixed element's size resolve from
+     its top/right/bottom/left offsets against the real visible viewport —
+     deliberately NOT width:100vw/height:100vh, since mobile browser/WebView
+     chrome (address bar, nav buttons) makes 100vh taller than what's
+     actually visible, cutting the input row off below the fold on phones.
+     width/height:auto is also needed to explicitly override the base
+     #ai-chat-box rule's own explicit height (responsive.css sets one for
+     the non-maximized mobile size) — auto here beats it via the higher
+     .maximized specificity, where simply omitting the property would not.
+  */
   inset: 0;
+  width: auto;
+  height: auto;
   z-index: 500;
-  width: 100vw;
-  height: 100vh;
   border-radius: 0;
   border: none;
 }
@@ -526,7 +536,14 @@ body.ai-chat-maximized { overflow: hidden; }
 }
 .ai-messages {
   flex: 1;
+  /* Without this, a flex item's default min-height:auto lets it grow to
+     fit all its content instead of shrinking to the space actually
+     available — the classic reason an inner "overflow-y:auto" scroll
+     area silently stops scrolling and the outer box grows/overflows
+     instead once enough messages pile up. */
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2334,7 +2351,32 @@ const MANUFACTURING_KEYWORDS = [
   's/4hana', 'oracle manufacturing', 'critical manufacturing', 'delmia',
   'factorytalk', 'aveva', 'gmp', 'good manufacturing practice',
   '21 cfr part 11', 'cfr part 11', 'validation protocol', 'iq oq pq',
-  'change control', 'cost of quality'
+  'change control', 'cost of quality',
+  // Quality & compliance — Module 8's Quality & Compliance interview category
+  'oos', 'out of specification', 'alcoa', 'alcoa+', 'cqa',
+  'critical quality attribute', 'cpp', 'critical process parameter', 'qbd',
+  'quality by design', 'proven acceptable range', 'normal operating range',
+  '483 observation', 'fda 483', 'data integrity', 'review by exception',
+  'hybrid system', 'e-signature', 'electronic signature', 'gxp',
+  'manufacturing operations management', 'golden batch',
+  // Implementation & delivery — Module 8's Delivery interview category
+  'fat', 'sat', 'uat', 'factory acceptance test', 'site acceptance test',
+  'user acceptance test', 'hypercare', 'raci', 'go-live', 'golive', 'cutover',
+  'parallel run', 'day in the life test', 'rehost', 'replatform',
+  // Industry-specific — Module 8's Industry Scenario interview category
+  'ppap', 'iatf', 'iatf 16949', 'apqp', 'catch-weight', 'catch weight',
+  'fdc', 'fault detection and classification', 'campaign scheduling',
+  'allergen changeover',
+  // OT security — Module 8's OT Security interview category
+  'industrial dmz', 'iec 62443', 'jump server', 'air-gapped', 'air gapped',
+  // Database & architecture — Module 7 / Module 5 deep dives
+  'polyglot persistence', 'cdc', 'change data capture', '6r framework',
+  'idempotency', 'idempotent', 'dead letter queue', 'event frame',
+  'pi asset framework', 'expand contract pattern', 'weigh and dispense',
+  'dispensing',
+  // Consulting — Module 13 (The Consultant Mindset) and interview prep generally
+  'consulting', 'consultant', 'stakeholder', 'business case',
+  'workshop facilitation', 'trusted advisor'
 ];
 
 // Keywords list is authored with a mix of separators ("isa-95", "opc ua"),
