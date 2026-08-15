@@ -29,3 +29,11 @@ window.MODULE_PREVIEW_TOPICS = {
   15: ['39 interview questions across 6 categories', 'STAR behavioral scenario bank', 'Live whiteboard design challenges', 'Mock rounds: recruiter, hiring manager, technical panel'],
   16: ['Timed mock interview sessions by track', 'Spaced-repetition flashcard practice', 'Self-paced review with due-today tracking', 'Progress synced with your dashboard']
 };
+
+// A short, curiosity-driving teaser paragraph for select modules' locked
+// gates — deliberately not written for every module (that's what the
+// "what's inside" topic list above is for); reserved for modules where a
+// few persuasive lines of real hook copy earn their place above the fold.
+window.MODULE_PREVIEW_HOOK = {
+  1: "Why does MES exist at all — and why do consultants say \"15% OEE improvement\" with a straight face in front of a CFO? There are exactly three root problems that justify every MES investment ever made, a business-value framework that actually survives budget scrutiny, and one greenfield-vs-brownfield distinction most candidates get wrong in interviews. This module is where you stop reciting the wiki definition and start sounding like someone who's actually been in the room."
+};
