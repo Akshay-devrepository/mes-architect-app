@@ -824,6 +824,16 @@ body.exit-confirm-open #exitConfirmDialog { opacity: 1; pointer-events: auto; tr
   line-height: 1.6;
   margin-bottom: 18px;
 }
+.locked-hook {
+  font-size: 13.5px;
+  color: var(--text);
+  font-style: italic;
+  line-height: 1.65;
+  text-align: left;
+  border-left: 3px solid var(--amber);
+  padding-left: 14px;
+  margin-bottom: 16px;
+}
 .locked-input-row {
   display: flex;
   gap: 8px;

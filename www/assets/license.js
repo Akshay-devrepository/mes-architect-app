@@ -371,6 +371,26 @@ function addGlobalLicenseUI() {
 // Inserts a "Buy Access" link (or a "contact the seller" fallback if no
 // link is configured for this module yet) into a still-locked gate, right
 // above the key-entry row.
+// Curiosity-hook teaser — a few persuasive lines of real prose, shown
+// above .locked-desc's plain "enter your key" instructions so a prospective
+// buyer reads something enticing before the transactional copy, not after.
+// Deliberately not written for every module (see module-preview-data.js) —
+// only where a genuine hook earns the extra attention above the fold.
+function addPreviewHookToGate(gate) {
+  if (gate.querySelector('.locked-hook')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const hook = window.MODULE_PREVIEW_HOOK && window.MODULE_PREVIEW_HOOK[idx];
+  if (!hook) return;
+
+  const titleEl = gate.querySelector('.locked-title');
+  if (!titleEl) return;
+
+  const p = document.createElement('div');
+  p.className = 'locked-hook';
+  p.textContent = hook;
+  titleEl.insertAdjacentElement('afterend', p);
+}
+
 // "What's inside" teaser — a few genuine topic bullets pulled from the
 // module's real content (see module-preview-data.js), shown right after
 // the locked-desc paragraph so a prospective buyer sees real value before
@@ -428,6 +448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (cache[idx]) revealModule(gate, cache[idx]);
   });
 
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addPreviewHookToGate);
   document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addPreviewTopicsToGate);
   document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addBuyLinkToGate);
 
