@@ -2314,8 +2314,19 @@ const GROQ_API_KEY = '__GROQ_API_KEY__';
 // Translation deliberately uses a DIFFERENT model (see translate.js) so
 // the two features draw from separate free-tier quota buckets instead of
 // competing for one.
+//
+// NOTE: qwen/qwen3.6-27b was tried here first and reverted — it's a
+// reasoning model that inlines its chain-of-thought directly into the
+// response's `content` field wrapped in literal <think>...</think> tags
+// (confirmed via a direct API call), which corrupted every translated
+// card since translateCardHtml() expects `content` to be clean HTML.
+// gpt-oss-20b puts its reasoning in a separate `reasoning` field instead
+// (verified directly), keeping `content` clean, same as gpt-oss-120b
+// above — and it's Groq's own recommended replacement for the OTHER
+// deprecated model (llama-3.1-8b-instant), so it's a stable production
+// model rather than a preview-tier one.
 const GROQ_MODEL = 'openai/gpt-oss-120b';
-const GROQ_TRANSLATE_MODEL = 'qwen/qwen3.6-27b';
+const GROQ_TRANSLATE_MODEL = 'openai/gpt-oss-20b';
 
 // ── Client-side topic gate ──
 // Cheap first pass before ever calling the AI: if nothing here matches,
