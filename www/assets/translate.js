@@ -5,6 +5,11 @@
 // realistic; this translates whatever's currently unlocked and in the
 // DOM, one concept/Q&A card at a time, entirely client-side.
 //
+// Deliberately uses a different Groq model (GROQ_TRANSLATE_MODEL, see
+// index.html) than the AI Coach's chat model — Groq's free tier quotas
+// are tracked per model, so translation no longer competes with AI Coach
+// chat traffic for the same tokens/minute budget.
+//
 // Only touches .section-header (always plaintext, shown even for locked
 // modules) to inject the controls — never modifies encrypt-modules.js or
 // requires re-encrypting anything.
@@ -125,7 +130,7 @@ async function translateModule(idx) {
     const card = cards[i];
     if (!originals.has(card)) originals.set(card, card.innerHTML);
 
-    // Groq's free tier caps at 12,000 tokens/minute for this model, and a
+    // Groq's free tier caps this model at 8,000 tokens/minute, and a
     // single large card can use 7,000-11,000 by itself — translating
     // several cards back to back routinely trips a 429. Rather than treat
     // that as a hard failure, back off for exactly as long as Groq says to
@@ -188,7 +193,7 @@ async function translateCardHtml(html, language) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model: GROQ_TRANSLATE_MODEL,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: html }],
       temperature: 0.2,
       // Some concept cards run well past 10K characters of nested HTML —

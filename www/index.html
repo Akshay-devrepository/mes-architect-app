@@ -2309,7 +2309,13 @@ function toggleAnswer(el) {
 // and the chat shows a clear "not configured" message instead of failing
 // silently or leaking a broken request.
 const GROQ_API_KEY = '__GROQ_API_KEY__';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// llama-3.3-70b-versatile is retired by Groq (free/dev tier shutdown
+// 2026-08-16) — migrated to its official recommended replacement.
+// Translation deliberately uses a DIFFERENT model (see translate.js) so
+// the two features draw from separate free-tier quota buckets instead of
+// competing for one.
+const GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_TRANSLATE_MODEL = 'qwen/qwen3.6-27b';
 
 // ── Client-side topic gate ──
 // Cheap first pass before ever calling the AI: if nothing here matches,
