@@ -130,11 +130,13 @@ async function translateModule(idx) {
     const card = cards[i];
     if (!originals.has(card)) originals.set(card, card.innerHTML);
 
-    // Groq's free tier caps this model at 8,000 tokens/minute, and a
-    // single large card can use 7,000-11,000 by itself — translating
-    // several cards back to back routinely trips a 429. Rather than treat
-    // that as a hard failure, back off for exactly as long as Groq says to
-    // and retry the same card once.
+    // Groq's free tier caps this model at 8,000 tokens/minute, and this
+    // is a reasoning model whose internal "thinking" adds real overhead on
+    // top of the translation itself — translating several cards back to
+    // back can still trip a 429 (too many requests already sent) or a 413
+    // (this request alone needs more than what's left in the window).
+    // Rather than treat either as a hard failure, back off for exactly as
+    // long as Groq says to and retry the same card once.
     let attempt = 0;
     let succeeded = false;
     while (attempt < 2 && !succeeded) {
@@ -167,6 +169,22 @@ async function translateModule(idx) {
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+// Groq's x-ratelimit-reset-tokens header uses a compound duration string
+// like "24.697s", "5m45.6s", or "1ms" rather than a plain number — this
+// pulls out however many of the h/m/s/ms parts are present.
+function parseGroqDurationMs(str) {
+  if (!str) return null;
+  if (/^[\d.]+ms$/.test(str)) return parseFloat(str);
+  let ms = 0;
+  const h = /([\d.]+)h/.exec(str);
+  const m = /([\d.]+)m(?!s)/.exec(str);
+  const s = /([\d.]+)s/.exec(str);
+  if (h) ms += parseFloat(h[1]) * 3600000;
+  if (m) ms += parseFloat(m[1]) * 60000;
+  if (s) ms += parseFloat(s[1]) * 1000;
+  return ms || null;
+}
+
 function revertModuleTranslation(idx) {
   const originals = translateOriginals[idx];
   if (!originals) return;
@@ -196,22 +214,32 @@ async function translateCardHtml(html, language) {
       model: GROQ_TRANSLATE_MODEL,
       messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: html }],
       temperature: 0.2,
-      // Some concept cards run well past 10K characters of nested HTML —
-      // max_tokens is just a ceiling (not a cost/quota reservation), so
-      // sizing it generously here avoids truncating a large card mid-
-      // translation, which would fail the structural check below anyway.
-      max_tokens: 8000
+      // GROQ_TRANSLATE_MODEL is a reasoning model — Groq's free-tier TPM
+      // cap (8,000) is checked against prompt tokens + this ceiling
+      // combined, so requesting the full 8,000 here would claim the
+      // entire per-minute budget on every single call. Sized instead to
+      // comfortably cover a real card's translation + reasoning overhead
+      // (observed ~1,400-2,500 tokens total in testing) while leaving
+      // headroom for several cards to succeed within the same window.
+      max_tokens: 4000
     })
   });
 
-  if (res.status === 429) {
+  // Groq returns 429 when too many requests have already gone out, and
+  // 413 when THIS request's token need (prompt + max_tokens) alone would
+  // exceed the remaining per-minute budget — both are the same underlying
+  // "free-tier ceiling" situation from the caller's perspective, so both
+  // get the same retry-once-after-backoff treatment.
+  if (res.status === 429 || res.status === 413) {
     const body = await res.json().catch(() => null);
     const message = (body && body.error && body.error.message) || '';
     const match = /try again in ([\d.]+)s/i.exec(message);
+    const waitMs = match
+      ? Math.ceil(parseFloat(match[1]) * 1000) + 500
+      : (parseGroqDurationMs(res.headers.get('x-ratelimit-reset-tokens')) || 15000) + 500;
     // Cap the wait — if Groq ever asks for an unreasonably long pause,
     // treat it as a failure for this card rather than block the whole
     // module on one multi-minute wait.
-    const waitMs = match ? Math.ceil(parseFloat(match[1]) * 1000) + 500 : 15000;
     const err = new Error('rate-limited');
     if (waitMs <= 70000) err.retryAfterMs = waitMs;
     throw err;
