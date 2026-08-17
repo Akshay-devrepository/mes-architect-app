@@ -1,14 +1,23 @@
 // ══════════════════════════════════════════
-// TRANSLATE.JS — on-demand module content translation via the same free
-// Groq API the AI Coach already uses. There's no backend and the paid
-// modules are encrypted at rest, so pre-translating content isn't
-// realistic; this translates whatever's currently unlocked and in the
-// DOM, one concept/Q&A card at a time, entirely client-side.
+// TRANSLATE.JS — module content translation, static-first with a live-API
+// fallback. There's no backend and the paid modules are encrypted at rest,
+// so most content is translated card-by-card on demand via the same free
+// Groq API the AI Coach uses.
+//
+// A growing subset of modules are pre-translated offline instead (see
+// scripts/generate-translations.js and assets/translations/*.js) — each
+// card's translation is encrypted the same way the English original is
+// (both individual-key and bundle-key variants), so unlock gating still
+// applies per-language exactly like it does for English. For those
+// modules, translateModule() below decrypts and swaps instantly with zero
+// API calls, zero rate-limit exposure. Anything not yet pre-translated —
+// or where the card's English content has since changed (content-hash
+// mismatch) — falls through to the live per-card API call unchanged.
 //
 // Deliberately uses a different Groq model (GROQ_TRANSLATE_MODEL, see
-// index.html) than the AI Coach's chat model — Groq's free tier quotas
-// are tracked per model, so translation no longer competes with AI Coach
-// chat traffic for the same tokens/minute budget.
+// index.html) than the AI Coach's chat model for the live-API path —
+// Groq's free tier quotas are tracked per model, so translation doesn't
+// compete with AI Coach chat traffic for the same tokens/minute budget.
 //
 // Only touches .section-header (always plaintext, shown even for locked
 // modules) to inject the controls — never modifies encrypt-modules.js or
@@ -41,6 +50,66 @@ function detectDeviceTranslateDefault() {
 // sectionIdx -> Map(cardElement -> original innerHTML), so "Show Original"
 // can restore exactly what was there before translating.
 const translateOriginals = {};
+
+// Only languages scripts/generate-translations.js has actually produced
+// static content for — anything else always uses the live API path below.
+const PRETRANSLATED_LANGUAGE_CODES = {
+  Spanish: 'es', French: 'fr', German: 'de',
+  'Mandarin Chinese': 'zh', Arabic: 'ar', Japanese: 'ja'
+};
+
+// Mirrors scripts/generate-translations.js's textContentApprox()+contentHash()
+// exactly (tag-strip, common-entity-decode, whitespace-collapse, then
+// SHA-256 → base64 → first 16 chars) — element.textContent already gives
+// the tag-stripped, entity-decoded text natively, so only the whitespace
+// normalization needs doing here before hashing.
+async function contentHashBrowser(text) {
+  const enc = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', enc);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).slice(0, 16);
+}
+
+// Tries to serve this card's translation from pre-generated static content
+// (see assets/translations/*.js) instead of a live API call — instant,
+// and immune to Groq's free-tier rate limits entirely, since it's just a
+// local decrypt. Returns the translated HTML on a hit, or null if this
+// module/language/card combination isn't covered yet (caller falls back
+// to the live path), or the card's English text has changed since the
+// translation was generated — the hash guards against ever showing a
+// stale translation of content that's since been edited.
+async function tryPretranslatedCard(idx, cardPosition, cardEl, language) {
+  const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
+  if (!langCode) return null;
+  const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
+  const entries = table && table[idx];
+  const entry = entries && entries[cardPosition];
+  if (!entry) return null;
+
+  // enhance.js's injectStars() appends a .star-btn bookmark toggle inside
+  // every card after unlock — real DOM content, but never part of the
+  // stored encrypted plaintext scripts/generate-translations.js hashed.
+  // Comparing against it directly would make every card look "changed"
+  // permanently. Hash a clone with those runtime-injected buttons removed
+  // instead, so the check reflects only the actual authored content.
+  const clone = cardEl.cloneNode(true);
+  clone.querySelectorAll('.star-btn').forEach((el) => el.remove());
+  const currentText = clone.textContent.replace(/\s+/g, ' ').trim();
+  const currentHash = await contentHashBrowser(currentText);
+  if (currentHash !== entry.hash) return null;
+
+  const unlock = window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx);
+  if (!unlock) return null; // no cached raw key on this device — live path will still work
+
+  // Try both variants regardless of which key type is cached, exactly like
+  // attemptUnlockModule() does for the English content — cheap, and robust
+  // to either key having been the one that actually unlocked this device.
+  let plaintext = await tryDecrypt(entry.individual, unlock.key);
+  if (!plaintext) plaintext = await tryDecrypt(entry.bundle, unlock.key + '::sec-' + idx);
+  return plaintext || null;
+}
 
 function addTranslateControlsToModules() {
   const deviceDefault = detectDeviceTranslateDefault();
@@ -103,10 +172,6 @@ async function translateModule(idx) {
     statusEl.textContent = 'Unlock this module first, then translate it.';
     return;
   }
-  if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
-    statusEl.textContent = 'Translation needs the AI engine, which isn’t configured yet.';
-    return;
-  }
 
   const cards = Array.from(section.querySelectorAll('.dd-wrap, .q-box'));
   if (!cards.length) {
@@ -129,6 +194,22 @@ async function translateModule(idx) {
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i];
     if (!originals.has(card)) originals.set(card, card.innerHTML);
+
+    statusEl.textContent = 'Translating card ' + (i + 1) + ' of ' + cards.length + ' to ' + language + '…';
+    const pretranslated = await tryPretranslatedCard(idx, i, card, language).catch(() => null);
+    if (pretranslated) {
+      card.innerHTML = pretranslated;
+      translatedCount++;
+      continue;
+    }
+
+    if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
+      // No pretranslated hit above, and the live-API engine isn't
+      // configured (only happens running locally without CI's secret
+      // substitution) — nothing more can be done for this card.
+      failedCount++;
+      continue;
+    }
 
     // Groq's free tier caps this model at 8,000 tokens/minute, and this
     // is a reasoning model whose internal "thinking" adds real overhead on

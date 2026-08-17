@@ -15,6 +15,7 @@
 const LICENSE_PBKDF2_ITERATIONS = 100000; // must match scripts/encrypt-modules.js
 const UNLOCKED_CACHE_KEY = 'mes_unlocked_content_v1'; // { [moduleIndex]: decryptedHtml }
 const BUNDLE_KEY_CACHE_KEY = 'mes_bundle_key_v1';
+const INDIVIDUAL_KEY_CACHE_KEY = 'mes_individual_keys_v1'; // { [moduleIndex]: rawKey }
 
 // ── Purchase links — fill these in once your Gumroad/LemonSqueezy products
 // exist, then redeploy. This is a plain runtime config (not part of the
@@ -257,10 +258,36 @@ async function attemptUnlockModule(gate, keyInput) {
   const cache = loadUnlockedCache();
   cache[idx] = plaintext;
   saveUnlockedCache(cache);
-  if (matchedBundle) localStorage.setItem(BUNDLE_KEY_CACHE_KEY, keyInput);
+  if (matchedBundle) {
+    localStorage.setItem(BUNDLE_KEY_CACHE_KEY, keyInput);
+  } else {
+    // Mirrors the bundle-key persistence above — needed so a later action
+    // that re-decrypts THIS module's content with a different ciphertext
+    // (e.g. loading a pre-translated language variant, see translate.js)
+    // can reuse the same already-proven key instead of re-prompting.
+    let individualKeys = {};
+    try { individualKeys = JSON.parse(localStorage.getItem(INDIVIDUAL_KEY_CACHE_KEY)) || {}; } catch (e) {}
+    individualKeys[idx] = keyInput;
+    localStorage.setItem(INDIVIDUAL_KEY_CACHE_KEY, JSON.stringify(individualKeys));
+  }
   revealModule(gate, plaintext);
   return true;
 }
+
+// The raw AES passphrase that successfully unlocked a given module, if
+// still available — either its own individual key, or the bundle key
+// (reconstructed the same way attemptUnlockModule() derives it). Used to
+// decrypt OTHER ciphertext for the same module (pre-translated language
+// variants) without asking the user to re-enter anything.
+function getUnlockKeyForModule(idx) {
+  let individualKeys = {};
+  try { individualKeys = JSON.parse(localStorage.getItem(INDIVIDUAL_KEY_CACHE_KEY)) || {}; } catch (e) {}
+  if (individualKeys[idx]) return { key: individualKeys[idx], isBundle: false };
+  const bundleKey = localStorage.getItem(BUNDLE_KEY_CACHE_KEY);
+  if (bundleKey) return { key: bundleKey, isBundle: true };
+  return null;
+}
+window.getUnlockKeyForModule = getUnlockKeyForModule;
 
 async function unlockAllWithKey(key) {
   const gates = document.querySelectorAll('.locked-gate:not(.unlocked)');

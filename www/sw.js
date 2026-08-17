@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mes-architect-v53';
+const CACHE_NAME = 'mes-architect-v55';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,6 +10,12 @@ const APP_SHELL = [
   './assets/module-preview-data.js',
   './assets/responsive.css',
   './assets/license.js',
+  './assets/translations/es.js',
+  './assets/translations/fr.js',
+  './assets/translations/de.js',
+  './assets/translations/zh.js',
+  './assets/translations/ar.js',
+  './assets/translations/ja.js',
   './assets/translate.js',
   './assets/build-version.js',
   './assets/update-check.js',

@@ -3,6 +3,11 @@
 # permanently free for anyone who reads git history, even after deleting it.
 LICENSE-KEYS-SECRET.md
 
+# Resume cache for scripts/generate-translations.js — just translated
+# chunk text keyed by position, nothing sensitive, but it's a working
+# cache, not a source artifact.
+.translation-checkpoint.json
+
 node_modules/
 android/app/build/
 android/build/
