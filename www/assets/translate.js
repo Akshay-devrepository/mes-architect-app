@@ -72,32 +72,51 @@ async function contentHashBrowser(text) {
   return btoa(binary).slice(0, 16);
 }
 
-// Tries to serve this card's translation from pre-generated static content
-// (see assets/translations/*.js) instead of a live API call — instant,
-// and immune to Groq's free-tier rate limits entirely, since it's just a
-// local decrypt. Returns the translated HTML on a hit, or null if this
-// module/language/card combination isn't covered yet (caller falls back
-// to the live path), or the card's English text has changed since the
-// translation was generated — the hash guards against ever showing a
-// stale translation of content that's since been edited.
-async function tryPretranslatedCard(idx, cardPosition, cardEl, language) {
+// Every direct child of a module's content container is one translatable
+// unit — concept cards, but also headings, intro paragraphs, diagrams,
+// tables, and accordions that sit alongside them. Locked modules keep
+// their content as ciphertext on .locked-gate until unlock, so this only
+// finds real blocks post-unlock; the free module (index 0) has no
+// .locked-gate/.unlocked-content wrapper at all, so it falls back to the
+// section itself, with the always-visible .section-header excluded (that
+// header is shown pre-purchase for paid modules too and is handled, if
+// ever, as a separate concern from body content).
+function getTranslatableBlocks(section) {
+  const container = section.querySelector('.unlocked-content') || section;
+  return Array.from(container.children).filter((el) => !el.classList.contains('section-header'));
+}
+
+// enhance.js's injectStars() appends a .star-btn bookmark toggle inside
+// every card after unlock — real DOM content, but never part of the
+// stored encrypted plaintext scripts/generate-translations.js hashed.
+// Comparing against it directly would make every block look "changed"
+// permanently, so hash a clone with those runtime-injected buttons
+// removed instead — the check then reflects only the actual authored
+// content, matching what generation hashed.
+async function hashBlockElement(el) {
+  const clone = el.cloneNode(true);
+  clone.querySelectorAll('.star-btn').forEach((btn) => btn.remove());
+  const text = clone.textContent.replace(/\s+/g, ' ').trim();
+  return contentHashBrowser(text);
+}
+
+// Tries to serve this block's translation from pre-generated static
+// content (see assets/translations/*.js) instead of a live API call —
+// instant, and immune to Groq's free-tier rate limits entirely, since
+// it's just a local decrypt. Returns the translated HTML on a hit, or
+// null if this module/language/block combination isn't covered yet
+// (caller falls back to the live path), or the block's English text has
+// changed since the translation was generated — the hash guards against
+// ever showing a stale translation of content that's since been edited.
+async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
   const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
   if (!langCode) return null;
   const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
   const entries = table && table[idx];
-  const entry = entries && entries[cardPosition];
+  const entry = entries && entries[blockPosition];
   if (!entry) return null;
 
-  // enhance.js's injectStars() appends a .star-btn bookmark toggle inside
-  // every card after unlock — real DOM content, but never part of the
-  // stored encrypted plaintext scripts/generate-translations.js hashed.
-  // Comparing against it directly would make every card look "changed"
-  // permanently. Hash a clone with those runtime-injected buttons removed
-  // instead, so the check reflects only the actual authored content.
-  const clone = cardEl.cloneNode(true);
-  clone.querySelectorAll('.star-btn').forEach((el) => el.remove());
-  const currentText = clone.textContent.replace(/\s+/g, ' ').trim();
-  const currentHash = await contentHashBrowser(currentText);
+  const currentHash = await hashBlockElement(blockEl);
   if (currentHash !== entry.hash) return null;
 
   const unlock = window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx);
@@ -109,6 +128,27 @@ async function tryPretranslatedCard(idx, cardPosition, cardEl, language) {
   let plaintext = await tryDecrypt(entry.individual, unlock.key);
   if (!plaintext) plaintext = await tryDecrypt(entry.bundle, unlock.key + '::sec-' + idx);
   return plaintext || null;
+}
+
+// A language is only offered for THIS module if every single block has a
+// matching, non-stale pretranslated entry — no partial "3 kept in
+// English" surprises from the dropdown. Modules with no (or incomplete)
+// pretranslated coverage simply don't list that language; the live-API
+// path is intentionally not exposed as a dropdown option (see file header).
+async function getFullyCoveredLanguages(idx, blocks) {
+  const covered = [];
+  for (const [language, langCode] of Object.entries(PRETRANSLATED_LANGUAGE_CODES)) {
+    const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
+    const entries = table && table[idx];
+    if (!entries || entries.length !== blocks.length) continue;
+    let allMatch = true;
+    for (let i = 0; i < blocks.length; i++) {
+      const hash = await hashBlockElement(blocks[i]);
+      if (hash !== entries[i].hash) { allMatch = false; break; }
+    }
+    if (allMatch) covered.push(language);
+  }
+  return covered;
 }
 
 function addTranslateControlsToModules() {
@@ -148,16 +188,50 @@ window.addTranslateControlsToModules = addTranslateControlsToModules;
 // revealModule() can call it again the moment a module unlocks mid-session,
 // since addTranslateControlsToModules() only ever builds each section's box
 // once (on page load).
+//
+// Also where the language dropdown gets (re)built for real: a still-locked
+// module has no real DOM content to check coverage against (ciphertext
+// only), so the options list can only be computed once revealModule() has
+// populated .unlocked-content — this runs on every unlock for exactly
+// that reason.
 function refreshTranslateLockUI(idx) {
   const section = document.getElementById('sec-' + idx);
   const box = section && section.querySelector('.translate-controls');
   if (!box) return;
   const locked = !!section.querySelector('.locked-gate:not(.unlocked)');
+  const select = box.querySelector('.translate-lang-select');
   const btn = box.querySelector('.translate-btn');
-  box.querySelector('.translate-lang-select').disabled = locked;
-  btn.disabled = locked;
-  btn.title = locked ? 'Unlock this module first, then translate it.' : '';
-  box.querySelector('.translate-status').textContent = locked ? '🔒 Unlock to translate' : '';
+  const statusEl = box.querySelector('.translate-status');
+
+  if (locked) {
+    select.disabled = true;
+    btn.disabled = true;
+    btn.title = 'Unlock this module first, then translate it.';
+    statusEl.textContent = '🔒 Unlock to translate';
+    return;
+  }
+
+  const blocks = getTranslatableBlocks(section);
+  getFullyCoveredLanguages(idx, blocks).then((languages) => {
+    const deviceDefault = detectDeviceTranslateDefault();
+    if (!languages.length) {
+      select.innerHTML = '<option value="">No languages available yet</option>';
+      select.disabled = true;
+      btn.disabled = true;
+      btn.title = 'Translation for this module isn’t ready yet — check back in a future update.';
+      statusEl.textContent = '';
+      return;
+    }
+    select.innerHTML =
+      '<option value="">🌐 Choose a language…</option>' +
+      languages.map((lang) =>
+        '<option value="' + lang + '"' + (lang === deviceDefault ? ' selected' : '') + '>' + lang + '</option>'
+      ).join('');
+    select.disabled = false;
+    btn.disabled = false;
+    btn.title = '';
+    statusEl.textContent = '';
+  });
 }
 window.refreshTranslateLockUI = refreshTranslateLockUI;
 
@@ -173,8 +247,8 @@ async function translateModule(idx) {
     return;
   }
 
-  const cards = Array.from(section.querySelectorAll('.dd-wrap, .q-box'));
-  if (!cards.length) {
+  const blocks = getTranslatableBlocks(section);
+  if (!blocks.length) {
     statusEl.textContent = 'Nothing to translate in this module yet.';
     return;
   }
@@ -191,47 +265,49 @@ async function translateModule(idx) {
   let translatedCount = 0;
   let failedCount = 0;
 
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i];
-    if (!originals.has(card)) originals.set(card, card.innerHTML);
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (!originals.has(block)) originals.set(block, block.innerHTML);
 
-    statusEl.textContent = 'Translating card ' + (i + 1) + ' of ' + cards.length + ' to ' + language + '…';
-    const pretranslated = await tryPretranslatedCard(idx, i, card, language).catch(() => null);
+    statusEl.textContent = 'Translating ' + (i + 1) + ' of ' + blocks.length + ' to ' + language + '…';
+    const pretranslated = await tryPretranslatedBlock(idx, i, block, language).catch(() => null);
     if (pretranslated) {
-      card.innerHTML = pretranslated;
+      block.innerHTML = pretranslated;
       translatedCount++;
       continue;
     }
 
+    // The dropdown only ever offers a language once getFullyCoveredLanguages()
+    // confirmed every block matches — reaching here means the block's
+    // content changed since that check (or between unlock and this click),
+    // so this is a defensive fallback, not the expected path. Still worth
+    // attempting live rather than just giving up on this one block.
     if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
-      // No pretranslated hit above, and the live-API engine isn't
-      // configured (only happens running locally without CI's secret
-      // substitution) — nothing more can be done for this card.
       failedCount++;
       continue;
     }
 
     // Groq's free tier caps this model at 8,000 tokens/minute, and this
     // is a reasoning model whose internal "thinking" adds real overhead on
-    // top of the translation itself — translating several cards back to
+    // top of the translation itself — translating several blocks back to
     // back can still trip a 429 (too many requests already sent) or a 413
     // (this request alone needs more than what's left in the window).
     // Rather than treat either as a hard failure, back off for exactly as
-    // long as Groq says to and retry the same card once.
+    // long as Groq says to and retry the same block once.
     let attempt = 0;
     let succeeded = false;
     while (attempt < 2 && !succeeded) {
       attempt++;
-      statusEl.textContent = 'Translating card ' + (i + 1) + ' of ' + cards.length + ' to ' + language + '…';
+      statusEl.textContent = 'Translating ' + (i + 1) + ' of ' + blocks.length + ' to ' + language + '…';
       try {
-        const translatedHtml = await translateCardHtml(originals.get(card), language);
-        card.innerHTML = translatedHtml;
+        const translatedHtml = await translateCardHtml(originals.get(block), language);
+        block.innerHTML = translatedHtml;
         succeeded = true;
         translatedCount++;
       } catch (e) {
         if (e.retryAfterMs && attempt < 2) {
           const waitSec = Math.ceil(e.retryAfterMs / 1000);
-          statusEl.textContent = 'Rate limited by the free AI tier — waiting ' + waitSec + 's before retrying card ' + (i + 1) + '…';
+          statusEl.textContent = 'Rate limited by the free AI tier — waiting ' + waitSec + 's before retrying…';
           await sleep(e.retryAfterMs);
         } else {
           failedCount++;
@@ -242,8 +318,8 @@ async function translateModule(idx) {
   }
 
   statusEl.textContent = failedCount
-    ? 'Translated ' + translatedCount + ' of ' + cards.length + ' cards (' + failedCount + ' kept in English — try again if needed).'
-    : 'Translated all ' + translatedCount + ' cards to ' + language + '.';
+    ? 'Translated ' + translatedCount + ' of ' + blocks.length + ' (' + failedCount + ' kept in English — try again if needed).'
+    : 'Translated all ' + translatedCount + ' to ' + language + '.';
   translateBtn.disabled = false;
   revertBtn.style.display = '';
 }
