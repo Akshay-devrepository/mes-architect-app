@@ -24,20 +24,21 @@
 // requires re-encrypting anything.
 // ══════════════════════════════════════════
 
+// The curated "best 6" — kept in sync with PRETRANSLATED_LANGUAGE_CODES
+// below, since a language with no pretranslated coverage can never
+// actually appear in the (real, post-unlock-rebuilt) dropdown anyway.
 const TRANSLATE_LANGUAGES = [
-  'Spanish', 'French', 'German', 'Portuguese', 'Italian',
-  'Hindi', 'Mandarin Chinese', 'Japanese', 'Korean', 'Arabic'
+  'Mandarin Chinese', 'Japanese', 'German', 'Korean', 'Italian', 'French'
 ];
 
-// Maps a browser/device locale's primary subtag (the "es" in "es-ES") to
+// Maps a browser/device locale's primary subtag (the "de" in "de-DE") to
 // one of the languages already offered above, so the dropdown starts on
 // whatever the device is already set to instead of always defaulting to
-// Spanish. Falls back to leaving the default selection alone (English
-// devices, or a locale not in the list above, e.g. English itself has no
-// entry since there's nothing to translate to).
+// the placeholder. Falls back to leaving the default selection alone
+// (English devices, or a locale not in the list above).
 const DEVICE_LANGUAGE_MAP = {
-  es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', it: 'Italian',
-  hi: 'Hindi', zh: 'Mandarin Chinese', ja: 'Japanese', ko: 'Korean', ar: 'Arabic'
+  fr: 'French', de: 'German', it: 'Italian',
+  zh: 'Mandarin Chinese', ja: 'Japanese', ko: 'Korean'
 };
 
 function detectDeviceTranslateDefault() {
@@ -54,8 +55,8 @@ const translateOriginals = {};
 // Only languages scripts/generate-translations.js has actually produced
 // static content for — anything else always uses the live API path below.
 const PRETRANSLATED_LANGUAGE_CODES = {
-  Spanish: 'es', French: 'fr', German: 'de',
-  'Mandarin Chinese': 'zh', Arabic: 'ar', Japanese: 'ja'
+  'Mandarin Chinese': 'zh', Japanese: 'ja', German: 'de',
+  Korean: 'ko', Italian: 'it', French: 'fr'
 };
 
 // Mirrors scripts/generate-translations.js's textContentApprox()+contentHash()
