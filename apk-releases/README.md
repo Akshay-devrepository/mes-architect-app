@@ -48,6 +48,21 @@ Naming: `MES-Architect-v<version>-<feature>.apk`
 | 1.0.99  | Chinese coverage extended to Modules 4-7 (ISA-88 Batch Control, MES Functional Modules, Industry-Specific MES, Concept Visualizations). Also fixed a hash-desync bug where a literal "<" in an ASCII diagram (pH < 5.5) was mis-parsed as a tag, silently rejecting a fully translated module |
 | 1.0.100 | Chinese coverage extended to Module 8 (Enterprise Architecture) — Chinese now covers Modules 2-8 |
 | 1.0.101 | Chinese coverage extended to Module 9 (Cloud Migration) — Chinese now covers Modules 2-9 |
+| 1.0.103 | Chinese coverage extended to Module 10 (Database & Data Models) — Chinese now covers Modules 2-10 |
+| 1.0.104 | Chinese coverage extended to Module 11 (MES Integration Deep Dive) — the largest module (26 blocks, ~313K chars). Chinese now covers Modules 2-11 |
+| 1.0.105 | Chinese coverage extended to Module 12 (Advanced Topics) — Chinese now covers Modules 2-12 |
+| 1.0.106 | Chinese coverage extended to Module 13 (AI in Manufacturing) — 35 blocks, ~228K chars. Chinese now covers Modules 2-13 |
+| 1.0.107 | Chinese coverage extended to Module 14 (Implementation Lifecycle) — Chinese now covers Modules 2-14 |
+| 1.0.108 | Chinese coverage extended to Module 15 (Consultant Mindset) — Chinese now covers Modules 2-15 |
+| 1.0.109 | Chinese coverage extended to Module 16 (AI Interview Coach) — Chinese pre-translated content now COMPLETE across all 16 paid modules |
+| 1.0.110 | German coverage extended to Module 4 (ISA-88 Batch Control) — German now covers Modules 2-4 |
+| 1.0.111 | German coverage extended to Module 5 (MES Functional Modules) — German now covers Modules 2-5 |
+| 1.0.112 | German coverage extended to Module 6 (Industry-Specific MES) — German now covers Modules 2-6 |
+| 1.0.113 | German coverage extended to Module 7 (Concept Visualizations) — German now covers Modules 2-7 |
+| 1.0.114 | German coverage extended to Module 8 (Enterprise Architecture) — German now covers Modules 2-8 |
+| 1.0.115 | German coverage extended to Module 9 (Cloud Migration) — German now covers Modules 2-9 |
+| 1.0.116 | German coverage extended to Module 10 (Database & Data Models) — German now covers Modules 2-10 |
+| 1.0.117 | German coverage extended to Module 11 (MES Integration Deep Dive) — the largest module (26 blocks, ~313K chars). German now covers Modules 2-11 |
 
 Each new feature ship gets copied in here too, going forward.
 
