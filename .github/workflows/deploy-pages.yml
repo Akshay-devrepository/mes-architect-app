@@ -28,7 +28,7 @@ jobs:
       - name: Write version.json (same git-commit-count scheme as the APK build)
         run: |
           VERSION_CODE=$(git rev-list --count HEAD)
-          VERSION_NAME="1.0.$VERSION_CODE"
+          VERSION_NAME="1.2.$VERSION_CODE"
           cat > www/version.json <<EOF
           {
             "versionCode": $VERSION_CODE,

@@ -31,7 +31,7 @@ jobs:
       - name: Stamp version (git commit count, shared with the Pages deploy)
         run: |
           VERSION_CODE=$(git rev-list --count HEAD)
-          VERSION_NAME="1.0.$VERSION_CODE"
+          VERSION_NAME="1.2.$VERSION_CODE"
           echo "Stamping version $VERSION_NAME ($VERSION_CODE)"
           sed -i "s/versionCode [0-9]\+/versionCode $VERSION_CODE/" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
