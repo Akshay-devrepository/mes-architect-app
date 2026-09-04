@@ -63,6 +63,7 @@ Naming: `MES-Architect-v<version>-<feature>.apk`
 | 1.0.115 | German coverage extended to Module 9 (Cloud Migration) — German now covers Modules 2-9 |
 | 1.0.116 | German coverage extended to Module 10 (Database & Data Models) — German now covers Modules 2-10 |
 | 1.0.117 | German coverage extended to Module 11 (MES Integration Deep Dive) — the largest module (26 blocks, ~313K chars). German now covers Modules 2-11 |
+| 1.0.119 | German coverage extended to Module 12 (Advanced Topics) — German now covers Modules 2-12 |
 
 Each new feature ship gets copied in here too, going forward.
 
