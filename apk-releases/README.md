@@ -74,6 +74,7 @@ Naming: `MES-Architect-v<version>-<feature>.apk`
 | 1.3.25  | Version scheme now rolls the patch number into minor once it passes 100 (1.2.100 → 1.3.0) instead of growing a 3rd digit. German coverage extended to Module 14 (Implementation Lifecycle) — German now covers Modules 2-14 |
 | 1.3.27  | German coverage extended to Module 15 (Consultant Mindset) — German now covers Modules 2-15 |
 | 1.3.29  | German coverage extended to Module 16 (AI Interview Coach) — German pre-translated content now COMPLETE across all 16 paid modules |
+| 1.3.31  | Fixed AI chat full-screen: added a top margin instead of running flush to the viewport edge; fixed page scroll getting stuck after minimizing (locked/unlocked `<html>` too, since it's the real scrolling element, not `<body>`; blur the auto-focused input on minimize; force a reflow) |
 
 Each new feature ship gets copied in here too, going forward.
 
