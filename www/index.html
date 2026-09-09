@@ -464,24 +464,31 @@ body::before {
 }
 #ai-chat-box.maximized {
   position: fixed;
-  /* inset:0 + width/height:auto lets a fixed element's size resolve from
-     its top/right/bottom/left offsets against the real visible viewport —
-     deliberately NOT width:100vw/height:100vh, since mobile browser/WebView
-     chrome (address bar, nav buttons) makes 100vh taller than what's
-     actually visible, cutting the input row off below the fold on phones.
+  /* top/right/bottom/left + width/height:auto lets a fixed element's size
+     resolve against the real visible viewport — deliberately NOT
+     width:100vw/height:100vh, since mobile browser/WebView chrome (address
+     bar, nav buttons) makes 100vh taller than what's actually visible,
+     cutting the input row off below the fold on phones.
      width/height:auto is also needed to explicitly override the base
      #ai-chat-box rule's own explicit height (responsive.css sets one for
      the non-maximized mobile size) — auto here beats it via the higher
      .maximized specificity, where simply omitting the property would not.
+     top keeps a visible gap above the box (respecting notches/status bars
+     via safe-area-inset-top, same pattern as .topbar/.sidebar-header)
+     instead of running the box flush to the very top edge.
   */
-  inset: 0;
+  top: max(16px, env(safe-area-inset-top));
+  right: 0;
+  bottom: 0;
+  left: 0;
   width: auto;
   height: auto;
   z-index: 500;
-  border-radius: 0;
+  border-radius: 8px 8px 0 0;
   border: none;
 }
 body.ai-chat-maximized { overflow: hidden; }
+html.ai-chat-maximized { overflow: hidden; }
 /* Absolutely positioned (not a flex child of .ai-chat-header) so it always
    sits pinned to the exact top-right corner of the chat box — maximized or
    not — regardless of how long the title/subtitle text runs. */
@@ -2618,11 +2625,25 @@ function sendQuick(text) {
 function toggleAiChatSize() {
   const box = document.getElementById('ai-chat-box');
   const btn = document.getElementById('aiChatSizeBtn');
+  const input = document.getElementById('ai-input');
   const maximized = box.classList.toggle('maximized');
   document.body.classList.toggle('ai-chat-maximized', maximized);
+  document.documentElement.classList.toggle('ai-chat-maximized', maximized);
   btn.textContent = maximized ? '⤡' : '⛶';
   btn.title = maximized ? 'Minimize' : 'Full screen';
-  if (maximized) document.getElementById('ai-input').focus();
+  if (maximized) {
+    input.focus();
+  } else {
+    // Blurring here (rather than leaving the keyboard-focused input as-is)
+    // avoids a real-device bug: with the on-screen keyboard still open from
+    // the maximized view, the page's scroll can end up stuck until some
+    // other interaction happens to shake it loose. Forcing a reflow next
+    // (reading offsetHeight) makes sure the WebView recomputes the now
+    // taller scrollable area immediately instead of leaving it cached at
+    // "nothing to scroll" from while the box covered the whole viewport.
+    input.blur();
+    void document.body.offsetHeight;
+  }
 }
 
 // The AI assistant lives inside Module 16 (AI Interview Coach), a paid
