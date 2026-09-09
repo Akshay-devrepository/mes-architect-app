@@ -2400,7 +2400,26 @@ const MANUFACTURING_KEYWORDS = [
   'dispensing',
   // Consulting — Module 13 (The Consultant Mindset) and interview prep generally
   'consulting', 'consultant', 'stakeholder', 'business case',
-  'workshop facilitation', 'trusted advisor'
+  'workshop facilitation', 'trusted advisor',
+  // Terms this app's own glossary (glossary-data.js) defines but that were
+  // missing here, so a user asking the AI Coach about one of its own
+  // taught terms was getting wrongly refused — found by diffing the two
+  // lists directly rather than guessing.
+  'b2mml', 'level 0', 'level 1', 'qms', 'lims', 'wip',
+  // Additional real MES/manufacturing terms and standards, covering
+  // verticals this board doesn't have dedicated modules for but that
+  // legitimately come up in interview prep (plastics/injection molding,
+  // semiconductor, packaging automation, process-industry standards
+  // bodies, maintenance, and broader quality/lean vocabulary).
+  'euromap', 'mtconnect', 'packml', 'omac', 'secs gem', 'secs/gem',
+  'gem300', 'semi e10', 'semi e30', 'semi e39', 'semi e40',
+  'namur', 'namur ne43', 'namur open architecture', 'weihenstephan standard',
+  'overall equipment effectiveness', 'mtbf', 'mttr', 'preventive maintenance',
+  'cmms', 'eam', 'calibration', 'equipment calibration', 'sop',
+  'standard operating procedure', 'audit trail', 'kpi',
+  'key performance indicator', 'equipment hierarchy', 'unit operation',
+  'poka yoke', 'jidoka', 'gemba', 'iso 22400', 'iso 9001',
+  'iso 13485', 'as9100', 'vda', 'aiag', 'pfmea', 'dfmea', 'plm'
 ];
 
 // Keywords list is authored with a mix of separators ("isa-95", "opc ua"),
