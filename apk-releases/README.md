@@ -4,6 +4,12 @@ Local-only archive of each shipped APK, kept so you can install and compare
 functionality across versions side by side. Not tracked in git (`*.apk` is
 gitignored) — this folder lives only on this machine.
 
+Note: on 2026-09-09 the drive holding this folder filled up (1GB total),
+blocking a build download/verify. The 49 oldest APKs (v1.0.24–v1.0.98) were
+deleted to free space — only the 10 most recent are kept on disk now. This
+table below still records every version ever shipped; only the binaries for
+the older ones are gone.
+
 Naming: `MES-Architect-v<version>-<feature>.apk`
 
 | Version | Feature added                          |
@@ -67,6 +73,7 @@ Naming: `MES-Architect-v<version>-<feature>.apk`
 | 1.2.122 | Version scheme bumped to 1.2.x to mark the German-language milestone. German coverage extended to Module 13 (AI in Manufacturing) — 35 blocks, ~228K chars. German now covers Modules 2-13 |
 | 1.3.25  | Version scheme now rolls the patch number into minor once it passes 100 (1.2.100 → 1.3.0) instead of growing a 3rd digit. German coverage extended to Module 14 (Implementation Lifecycle) — German now covers Modules 2-14 |
 | 1.3.27  | German coverage extended to Module 15 (Consultant Mindset) — German now covers Modules 2-15 |
+| 1.3.29  | German coverage extended to Module 16 (AI Interview Coach) — German pre-translated content now COMPLETE across all 16 paid modules |
 
 Each new feature ship gets copied in here too, going forward.
 
