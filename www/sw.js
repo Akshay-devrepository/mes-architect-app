@@ -1,4 +1,7 @@
-const CACHE_NAME = 'mes-architect-v84';
+// Both CI workflows overwrite this with 'mes-architect-v<git commit count>'
+// at build time (see the "Stamp version" step), so every deploy gets a
+// fresh cache automatically — this literal is only the local-dev default.
+const CACHE_NAME = 'mes-architect-dev';
 const APP_SHELL = [
   './',
   './index.html',
