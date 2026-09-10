@@ -33,6 +33,7 @@ jobs:
           PATCH=$(( VERSION_CODE % 100 ))
           VERSION_NAME="1.$MINOR.$PATCH"
           sed -i "s#const CACHE_NAME = '[^']*'#const CACHE_NAME = 'mes-architect-v$VERSION_CODE'#" www/sw.js
+          node scripts/build-translation-manifest.js
           cat > www/version.json <<EOF
           {
             "versionCode": $VERSION_CODE,

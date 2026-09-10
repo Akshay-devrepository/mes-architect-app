@@ -99,16 +99,39 @@ async function hashBlockElement(el) {
   return contentHashBrowser(text);
 }
 
+// The full per-language ciphertext files (assets/translations/<lang>.js —
+// up to ~4.5 MB each) are NOT loaded on page start any more; only the
+// ~10 KB hashes-only manifest is. This fetches a language's real content
+// the first time it's actually needed, then caches the promise so repeat
+// calls (and the module's block loop) share the one download. The service
+// worker's network-first fetch handler caches the file itself for offline
+// use after that.
+const pretranslatedLangLoads = {};
+function ensurePretranslatedLang(langCode) {
+  const global = 'PRETRANSLATED_' + langCode.toUpperCase();
+  if (window[global]) return Promise.resolve();
+  if (pretranslatedLangLoads[langCode]) return pretranslatedLangLoads[langCode];
+  pretranslatedLangLoads[langCode] = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'assets/translations/' + langCode + '.js';
+    s.onload = () => window[global] ? resolve() : reject(new Error('loaded but empty: ' + langCode));
+    s.onerror = () => { delete pretranslatedLangLoads[langCode]; reject(new Error('failed to load ' + langCode)); };
+    document.head.appendChild(s);
+  });
+  return pretranslatedLangLoads[langCode];
+}
+
 // Serves this block's translation from pre-generated static content
-// (see assets/translations/*.js) — instant, just a local decrypt.
-// Returns the translated HTML on a hit, or null if this module/language/
-// block combination isn't covered, the key isn't cached, or the block's
-// English text has changed since the translation was generated — the hash
-// guards against ever showing a stale translation of edited content. On a
-// null return the caller leaves that block in English.
+// (see assets/translations/*.js) — a local decrypt once the language file
+// is loaded. Returns the translated HTML on a hit, or null if this
+// module/language/block combination isn't covered, the key isn't cached,
+// or the block's English text has changed since the translation was
+// generated — the hash guards against ever showing a stale translation of
+// edited content. On a null return the caller leaves that block in English.
 async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
   const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
   if (!langCode) return null;
+  try { await ensurePretranslatedLang(langCode); } catch (e) { return null; }
   const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
   const entries = table && table[idx];
   const entry = entries && entries[blockPosition];
@@ -133,6 +156,11 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
 // English" surprises from the dropdown. Modules with no (or incomplete)
 // pretranslated coverage simply don't list that language.
 //
+// Reads the hashes-only manifest (window.PRETRANSLATED_MANIFEST, ~10 KB,
+// loaded eagerly) rather than the full per-language ciphertext files, so
+// deciding the dropdown never triggers a multi-MB download. Manifest shape
+// is { langCode: { moduleIdx: [hash, hash, ...] } }.
+//
 // It also requires a usable decryption key (getUnlockKeyForModule) — the
 // pretranslated content is encrypted exactly like the English original,
 // so with no cached key NONE of it can be served. Without this check the
@@ -144,14 +172,14 @@ async function getFullyCoveredLanguages(idx, blocks) {
   const covered = [];
   const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx));
   if (!hasUnlockKey) return { covered, hasUnlockKey };
+  const manifest = window.PRETRANSLATED_MANIFEST || {};
   for (const [language, langCode] of Object.entries(PRETRANSLATED_LANGUAGE_CODES)) {
-    const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
-    const entries = table && table[idx];
-    if (!entries || entries.length !== blocks.length) continue;
+    const hashes = manifest[langCode] && manifest[langCode][idx];
+    if (!hashes || hashes.length !== blocks.length) continue;
     let allMatch = true;
     for (let i = 0; i < blocks.length; i++) {
       const hash = await hashBlockElement(blocks[i]);
-      if (hash !== entries[i].hash) { allMatch = false; break; }
+      if (hash !== hashes[i]) { allMatch = false; break; }
     }
     if (allMatch) covered.push(language);
   }
@@ -276,6 +304,22 @@ async function translateModule(idx) {
   translateBtn.disabled = true;
   let translatedCount = 0;
   let failedCount = 0;
+
+  // Pull the (up to ~4.5 MB) language file now, once, with its own status —
+  // it's fetched on first use rather than at page load. The SW caches it,
+  // so this only actually downloads the first time this language is picked
+  // on this device.
+  const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
+  if (langCode && !window['PRETRANSLATED_' + langCode.toUpperCase()]) {
+    statusEl.textContent = 'Loading ' + language + ' translations…';
+    try {
+      await ensurePretranslatedLang(langCode);
+    } catch (e) {
+      statusEl.textContent = 'Couldn’t load the ' + language + ' translation file — check your connection and try again.';
+      translateBtn.disabled = false;
+      return;
+    }
+  }
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];

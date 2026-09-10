@@ -39,6 +39,7 @@ jobs:
           sed -i "s/versionCode [0-9]\+/versionCode $VERSION_CODE/" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION_NAME\"/" android/app/build.gradle
           sed -i "s#const CACHE_NAME = '[^']*'#const CACHE_NAME = 'mes-architect-v$VERSION_CODE'#" www/sw.js
+          node scripts/build-translation-manifest.js
           cat > www/assets/build-version.js <<EOF
           window.APP_VERSION_CODE = $VERSION_CODE;
           window.APP_VERSION_NAME = "$VERSION_NAME";
