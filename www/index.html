@@ -513,6 +513,91 @@ html.ai-chat-maximized { overflow: hidden; }
   padding: 0;
 }
 #aiChatSizeBtn:hover { border-color: var(--amber); color: var(--amber); }
+
+/* ── MIND MAP ── */
+.mindmap-open-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mindmap-open-btn:hover { border-color: var(--amber); color: var(--amber); }
+.mindmap-modal {
+  display: none;
+  position: fixed;
+  /* inset with a real top margin instead of inset:0 — a full-bleed
+     overlay reads as "did this break" on first glance, and the same
+     flush-to-the-edge complaint already came up once for the AI chat
+     full-screen view. */
+  top: 28px; left: 0; right: 0; bottom: 0;
+  z-index: 600;
+  background: var(--bg);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mindmap-modal.open { display: flex; }
+body.mindmap-open { overflow: hidden; }
+.mindmap-modal-header {
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.mindmap-modal-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mindmap-modal-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mm-ctrl-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mm-ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+.mm-close-btn:hover { border-color: var(--red); color: var(--red); }
+.mindmap-canvas {
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.mindmap-canvas:active { cursor: grabbing; }
+#mmSvg { width: 100%; height: 100%; overflow: visible; }
+.mm-node rect { transition: stroke-width 0.15s; }
+.mm-node text { pointer-events: none; user-select: none; }
+
 .ai-chat-header {
   padding: 14px 44px 14px 18px; /* right padding reserves room for the corner button so title/sub text never runs under it */
   background: var(--surface2);
@@ -2722,6 +2807,8 @@ document.getElementById('progressFill').style.width = Math.round((visitedSection
 <script src="assets/quiz-data.js"></script>
 <script src="assets/glossary-data.js"></script>
 <script src="assets/module-preview-data.js"></script>
+<script src="assets/mindmap-data.js"></script>
+<script src="assets/mindmap.js"></script>
 <script src="assets/enhance.js"></script>
 <script src="assets/license.js"></script>
 <script src="assets/translations/fr.js"></script>

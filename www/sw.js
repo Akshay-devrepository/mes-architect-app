@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mes-architect-v81';
+const CACHE_NAME = 'mes-architect-v82';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,6 +8,8 @@ const APP_SHELL = [
   './assets/quiz-data.js',
   './assets/glossary-data.js',
   './assets/module-preview-data.js',
+  './assets/mindmap-data.js',
+  './assets/mindmap.js',
   './assets/responsive.css',
   './assets/license.js',
   './assets/translations/fr.js',
