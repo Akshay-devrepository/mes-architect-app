@@ -1,23 +1,21 @@
 // ══════════════════════════════════════════
-// TRANSLATE.JS — module content translation, static-first with a live-API
-// fallback. There's no backend and the paid modules are encrypted at rest,
-// so most content is translated card-by-card on demand via the same free
-// Groq API the AI Coach uses.
-//
-// A growing subset of modules are pre-translated offline instead (see
+// TRANSLATE.JS — module content translation, fully pre-translated offline.
+// There's no backend and the paid modules are encrypted at rest, so every
+// module/language pair is generated ahead of time (see
 // scripts/generate-translations.js and assets/translations/*.js) — each
 // card's translation is encrypted the same way the English original is
 // (both individual-key and bundle-key variants), so unlock gating still
-// applies per-language exactly like it does for English. For those
-// modules, translateModule() below decrypts and swaps instantly with zero
-// API calls, zero rate-limit exposure. Anything not yet pre-translated —
-// or where the card's English content has since changed (content-hash
-// mismatch) — falls through to the live per-card API call unchanged.
+// applies per-language exactly like it does for English. translateModule()
+// below decrypts and swaps instantly with zero API calls.
 //
-// Deliberately uses a different Groq model (GROQ_TRANSLATE_MODEL, see
-// index.html) than the AI Coach's chat model for the live-API path —
-// Groq's free tier quotas are tracked per model, so translation doesn't
-// compete with AI Coach chat traffic for the same tokens/minute budget.
+// There used to be a live Groq API fallback for anything not pre-translated
+// (and it's what the AI Coach still uses for chat), but coverage is now
+// comprehensive and that path was unreliable — rate limits, and truncated
+// responses that left big deep-dive cards in English — so it was removed.
+// The dropdown only offers a language once every block is covered AND a
+// decryption key is cached; a block whose English text changed after its
+// translation was generated (hash mismatch) simply stays in English and is
+// reported, rather than being sent to a flaky API.
 //
 // Only touches .section-header (always plaintext, shown even for locked
 // modules) to inject the controls — never modifies encrypt-modules.js or
@@ -53,7 +51,7 @@ function detectDeviceTranslateDefault() {
 const translateOriginals = {};
 
 // Only languages scripts/generate-translations.js has actually produced
-// static content for — anything else always uses the live API path below.
+// static content for — anything else is simply never offered.
 const PRETRANSLATED_LANGUAGE_CODES = {
   'Mandarin Chinese': 'zh', Japanese: 'ja', German: 'de',
   Korean: 'ko', Italian: 'it', French: 'fr'
@@ -101,14 +99,13 @@ async function hashBlockElement(el) {
   return contentHashBrowser(text);
 }
 
-// Tries to serve this block's translation from pre-generated static
-// content (see assets/translations/*.js) instead of a live API call —
-// instant, and immune to Groq's free-tier rate limits entirely, since
-// it's just a local decrypt. Returns the translated HTML on a hit, or
-// null if this module/language/block combination isn't covered yet
-// (caller falls back to the live path), or the block's English text has
-// changed since the translation was generated — the hash guards against
-// ever showing a stale translation of content that's since been edited.
+// Serves this block's translation from pre-generated static content
+// (see assets/translations/*.js) — instant, just a local decrypt.
+// Returns the translated HTML on a hit, or null if this module/language/
+// block combination isn't covered, the key isn't cached, or the block's
+// English text has changed since the translation was generated — the hash
+// guards against ever showing a stale translation of edited content. On a
+// null return the caller leaves that block in English.
 async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
   const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
   if (!langCode) return null;
@@ -121,7 +118,7 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
   if (currentHash !== entry.hash) return null;
 
   const unlock = window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx);
-  if (!unlock) return null; // no cached raw key on this device — live path will still work
+  if (!unlock) return null; // no cached key — can't decrypt the translation
 
   // Try both variants regardless of which key type is cached, exactly like
   // attemptUnlockModule() does for the English content — cheap, and robust
@@ -134,17 +131,15 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
 // A language is only offered for THIS module if every single block has a
 // matching, non-stale pretranslated entry — no partial "3 kept in
 // English" surprises from the dropdown. Modules with no (or incomplete)
-// pretranslated coverage simply don't list that language; the live-API
-// path is intentionally not exposed as a dropdown option (see file header).
+// pretranslated coverage simply don't list that language.
 //
 // It also requires a usable decryption key (getUnlockKeyForModule) — the
 // pretranslated content is encrypted exactly like the English original,
 // so with no cached key NONE of it can be served. Without this check the
-// dropdown would offer a language, then every block would silently fall
-// through to the live path (which, for big deep-dive cards, fails and
-// leaves them in English) — the exact "deep dive reverts to English"
-// symptom. hasUnlockKey is surfaced separately so refreshTranslateLockUI
-// can show "re-enter your key" instead of "not available yet".
+// dropdown would offer a language it then can't actually apply, leaving
+// every block in English — the "deep dive reverts to English" symptom.
+// hasUnlockKey is surfaced separately so refreshTranslateLockUI can show
+// "re-enter your key" instead of "not available yet".
 async function getFullyCoveredLanguages(idx, blocks) {
   const covered = [];
   const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx));
@@ -294,78 +289,22 @@ async function translateModule(idx) {
       continue;
     }
 
-    // The dropdown only ever offers a language once getFullyCoveredLanguages()
-    // confirmed every block matches — reaching here means the block's
-    // content changed since that check (or between unlock and this click),
-    // so this is a defensive fallback, not the expected path. Still worth
-    // attempting live rather than just giving up on this one block.
-    if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) {
-      failedCount++;
-      continue;
-    }
-
-    // Groq's free tier caps this model at 8,000 tokens/minute, and this
-    // is a reasoning model whose internal "thinking" adds real overhead on
-    // top of the translation itself — translating several blocks back to
-    // back can still trip a 429 (too many requests already sent) or a 413
-    // (this request alone needs more than what's left in the window).
-    // Rather than treat either as a hard failure, back off for exactly as
-    // long as Groq says to and retry the same block once.
-    let attempt = 0;
-    let succeeded = false;
-    while (attempt < 2 && !succeeded) {
-      attempt++;
-      statusEl.textContent = 'Translating ' + (i + 1) + ' of ' + blocks.length + ' to ' + language + '…';
-      try {
-        // A deep-dive card's full HTML is far larger than translateCardHtml's
-        // ~4,000-token output ceiling — sent whole it comes back truncated,
-        // fails the tag-count sanity check, and the card stays in English
-        // ("open the deep dive and it's English again"). Translate its
-        // direct children one at a time and stitch the results back
-        // together instead, so each request stays inside the budget.
-        const originalHtml = originals.get(block);
-        const translatedHtml = originalHtml.length > LIVE_TRANSLATE_MAX_HTML
-          ? await translateLargeHtml(originalHtml, language, statusEl, i, blocks.length)
-          : await translateCardHtml(originalHtml, language);
-        block.innerHTML = translatedHtml;
-        succeeded = true;
-        translatedCount++;
-      } catch (e) {
-        if (e.retryAfterMs && attempt < 2) {
-          const waitSec = Math.ceil(e.retryAfterMs / 1000);
-          statusEl.textContent = 'Rate limited by the free AI tier — waiting ' + waitSec + 's before retrying…';
-          await sleep(e.retryAfterMs);
-        } else {
-          failedCount++;
-          break;
-        }
-      }
-    }
+    // Every offered language is fully pre-translated (getFullyCoveredLanguages
+    // gates the dropdown on that AND a usable key), so reaching here means
+    // this one block's English text changed since the pre-translation was
+    // generated — its hash no longer matches. There used to be a live Groq
+    // API fallback here, but it was unreliable (rate limits, truncated
+    // responses on big deep-dive cards) and is no longer needed now that
+    // coverage is comprehensive — leave the block in English and report it.
+    failedCount++;
   }
 
   statusEl.textContent = failedCount
-    ? 'Translated ' + translatedCount + ' of ' + blocks.length + ' (' + failedCount + ' kept in English — try again if needed).'
+    ? 'Translated ' + translatedCount + ' of ' + blocks.length + ' — ' + failedCount +
+      ' block' + (failedCount === 1 ? '' : 's') + ' changed since translation and stayed in English.'
     : 'Translated all ' + translatedCount + ' to ' + language + '.';
   translateBtn.disabled = false;
   revertBtn.style.display = '';
-}
-
-function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-
-// Groq's x-ratelimit-reset-tokens header uses a compound duration string
-// like "24.697s", "5m45.6s", or "1ms" rather than a plain number — this
-// pulls out however many of the h/m/s/ms parts are present.
-function parseGroqDurationMs(str) {
-  if (!str) return null;
-  if (/^[\d.]+ms$/.test(str)) return parseFloat(str);
-  let ms = 0;
-  const h = /([\d.]+)h/.exec(str);
-  const m = /([\d.]+)m(?!s)/.exec(str);
-  const s = /([\d.]+)s/.exec(str);
-  if (h) ms += parseFloat(h[1]) * 3600000;
-  if (m) ms += parseFloat(m[1]) * 60000;
-  if (s) ms += parseFloat(s[1]) * 1000;
-  return ms || null;
 }
 
 function revertModuleTranslation(idx) {
@@ -376,133 +315,6 @@ function revertModuleTranslation(idx) {
   const section = document.getElementById('sec-' + idx);
   section.querySelector('.translate-revert-btn').style.display = 'none';
   section.querySelector('.translate-status').textContent = '';
-}
-
-// Above this many characters of HTML, one translateCardHtml() call would
-// blow past its ~4,000-token output ceiling and come back truncated.
-const LIVE_TRANSLATE_MAX_HTML = 3500;
-
-// Translates an oversized fragment by splitting it into its direct child
-// elements, translating each (recursively, if a child is itself still too
-// big), and reassembling in place. Text/comment nodes between children are
-// preserved verbatim. Falls back to translating a child whole if it can't
-// be split further.
-async function translateLargeHtml(html, language, statusEl, blockNum, blockTotal) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  const parts = [];
-  for (const node of Array.from(tmp.childNodes)) {
-    if (node.nodeType !== 1) { // text, comment — keep as-is
-      parts.push(node.nodeType === 3 ? escapeForHtml(node.textContent) : outerHtmlOf(node));
-      continue;
-    }
-    const childHtml = node.outerHTML;
-    if (childHtml.length <= LIVE_TRANSLATE_MAX_HTML) {
-      parts.push(await translateCardHtml(childHtml, language));
-    } else if (node.children.length > 0) {
-      // Recurse: rebuild this element with its translated inner content.
-      const innerTranslated = await translateLargeHtml(node.innerHTML, language, statusEl, blockNum, blockTotal);
-      const shell = node.cloneNode(false);
-      shell.innerHTML = innerTranslated;
-      parts.push(shell.outerHTML);
-    } else {
-      // A single leaf element too big to split (e.g. one huge <pre>) —
-      // send it whole and accept whatever comes back rather than skip it.
-      parts.push(await translateCardHtml(childHtml, language).catch(() => childHtml));
-    }
-    if (statusEl) {
-      statusEl.textContent = 'Translating ' + blockNum + ' of ' + blockTotal +
-        ' to ' + language + '… (large card, ' + parts.length + ' parts)';
-    }
-  }
-  return parts.join('');
-}
-
-function outerHtmlOf(node) {
-  const d = document.createElement('div');
-  d.appendChild(node.cloneNode(true));
-  return d.innerHTML;
-}
-function escapeForHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-async function translateCardHtml(html, language) {
-  const systemPrompt =
-    'You translate small HTML fragments from a Manufacturing Execution System (MES) ' +
-    'interview-prep app into ' + language + '. Rules, followed exactly:\n' +
-    '1. Translate ONLY the human-readable prose text into ' + language + '.\n' +
-    '2. Never change HTML tag names, attribute names, attribute values, class names, ' +
-    'onclick handlers, or inline style attributes.\n' +
-    '3. Never translate short technical/classification badges that look like standards, ' +
-    'codes, or metrics (e.g. "ISA-95 Level 3", "OEE", "21 CFR Part 11") — keep those exactly as-is.\n' +
-    '4. Preserve the exact HTML structure and tag nesting — do not add, remove, or reorder tags.\n' +
-    '5. Return ONLY the resulting HTML fragment. No markdown code fences, no explanation, no commentary.';
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
-    body: JSON.stringify({
-      model: GROQ_TRANSLATE_MODEL,
-      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: html }],
-      temperature: 0.2,
-      // GROQ_TRANSLATE_MODEL is a reasoning model — Groq's free-tier TPM
-      // cap (8,000) is checked against prompt tokens + this ceiling
-      // combined, so requesting the full 8,000 here would claim the
-      // entire per-minute budget on every single call. Sized instead to
-      // comfortably cover a real card's translation + reasoning overhead
-      // (observed ~1,400-2,500 tokens total in testing) while leaving
-      // headroom for several cards to succeed within the same window.
-      max_tokens: 4000
-    })
-  });
-
-  // Groq returns 429 when too many requests have already gone out, and
-  // 413 when THIS request's token need (prompt + max_tokens) alone would
-  // exceed the remaining per-minute budget — both are the same underlying
-  // "free-tier ceiling" situation from the caller's perspective, so both
-  // get the same retry-once-after-backoff treatment.
-  if (res.status === 429 || res.status === 413) {
-    const body = await res.json().catch(() => null);
-    const message = (body && body.error && body.error.message) || '';
-    const match = /try again in ([\d.]+)s/i.exec(message);
-    const waitMs = match
-      ? Math.ceil(parseFloat(match[1]) * 1000) + 500
-      : (parseGroqDurationMs(res.headers.get('x-ratelimit-reset-tokens')) || 15000) + 500;
-    // Cap the wait — if Groq ever asks for an unreasonably long pause,
-    // treat it as a failure for this card rather than block the whole
-    // module on one multi-minute wait.
-    const err = new Error('rate-limited');
-    if (waitMs <= 70000) err.retryAfterMs = waitMs;
-    throw err;
-  }
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-
-  const data = await res.json();
-  const translated = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  if (!translated) throw new Error('empty-response');
-
-  // The model sometimes ignores rule #5 and adds a one-line preamble in
-  // the target language before the HTML (or wraps it in a code fence) —
-  // slicing from the first "<" to the last ">" discards any of that
-  // surrounding prose/fencing regardless of where it lands.
-  const start = translated.indexOf('<');
-  const end = translated.lastIndexOf('>');
-  const cleaned = (start !== -1 && end !== -1 && end > start)
-    ? translated.slice(start, end + 1).trim()
-    : translated.trim();
-
-  // Structural sanity check — reject anything that looks like it dropped
-  // or hallucinated tags rather than risk corrupting the page with a
-  // malformed response. A little slack for minor tag-count drift from
-  // translated attribute quoting/whitespace differences.
-  const origTagCount = (html.match(/<[a-zA-Z][^>]*>/g) || []).length;
-  const newTagCount = (cleaned.match(/<[a-zA-Z][^>]*>/g) || []).length;
-  if (origTagCount > 0 && Math.abs(origTagCount - newTagCount) > Math.max(2, Math.round(origTagCount * 0.2))) {
-    throw new Error('structure-mismatch');
-  }
-
-  return cleaned;
 }
 
 document.addEventListener('DOMContentLoaded', addTranslateControlsToModules);
