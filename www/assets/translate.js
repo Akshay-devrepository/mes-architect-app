@@ -136,8 +136,19 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
 // English" surprises from the dropdown. Modules with no (or incomplete)
 // pretranslated coverage simply don't list that language; the live-API
 // path is intentionally not exposed as a dropdown option (see file header).
+//
+// It also requires a usable decryption key (getUnlockKeyForModule) — the
+// pretranslated content is encrypted exactly like the English original,
+// so with no cached key NONE of it can be served. Without this check the
+// dropdown would offer a language, then every block would silently fall
+// through to the live path (which, for big deep-dive cards, fails and
+// leaves them in English) — the exact "deep dive reverts to English"
+// symptom. hasUnlockKey is surfaced separately so refreshTranslateLockUI
+// can show "re-enter your key" instead of "not available yet".
 async function getFullyCoveredLanguages(idx, blocks) {
   const covered = [];
+  const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx));
+  if (!hasUnlockKey) return { covered, hasUnlockKey };
   for (const [language, langCode] of Object.entries(PRETRANSLATED_LANGUAGE_CODES)) {
     const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
     const entries = table && table[idx];
@@ -149,7 +160,7 @@ async function getFullyCoveredLanguages(idx, blocks) {
     }
     if (allMatch) covered.push(language);
   }
-  return covered;
+  return { covered, hasUnlockKey };
 }
 
 function addTranslateControlsToModules() {
@@ -213,13 +224,18 @@ function refreshTranslateLockUI(idx) {
   }
 
   const blocks = getTranslatableBlocks(section);
-  getFullyCoveredLanguages(idx, blocks).then((languages) => {
+  getFullyCoveredLanguages(idx, blocks).then(({ covered: languages, hasUnlockKey }) => {
     const deviceDefault = detectDeviceTranslateDefault();
     if (!languages.length) {
-      select.innerHTML = '<option value="">No languages available yet</option>';
+      const noKey = !hasUnlockKey;
+      select.innerHTML = '<option value="">' +
+        (noKey ? 'Re-enter your license key to enable translation' : 'No languages available yet') +
+        '</option>';
       select.disabled = true;
       btn.disabled = true;
-      btn.title = 'Translation for this module isn’t ready yet — check back in a future update.';
+      btn.title = noKey
+        ? 'This module was restored from an earlier session without its license key — re-enter the key (any module’s unlock box, or the sidebar) to enable translation.'
+        : 'Translation for this module isn’t ready yet — check back in a future update.';
       statusEl.textContent = '';
       return;
     }
@@ -301,7 +317,16 @@ async function translateModule(idx) {
       attempt++;
       statusEl.textContent = 'Translating ' + (i + 1) + ' of ' + blocks.length + ' to ' + language + '…';
       try {
-        const translatedHtml = await translateCardHtml(originals.get(block), language);
+        // A deep-dive card's full HTML is far larger than translateCardHtml's
+        // ~4,000-token output ceiling — sent whole it comes back truncated,
+        // fails the tag-count sanity check, and the card stays in English
+        // ("open the deep dive and it's English again"). Translate its
+        // direct children one at a time and stitch the results back
+        // together instead, so each request stays inside the budget.
+        const originalHtml = originals.get(block);
+        const translatedHtml = originalHtml.length > LIVE_TRANSLATE_MAX_HTML
+          ? await translateLargeHtml(originalHtml, language, statusEl, i, blocks.length)
+          : await translateCardHtml(originalHtml, language);
         block.innerHTML = translatedHtml;
         succeeded = true;
         translatedCount++;
@@ -351,6 +376,55 @@ function revertModuleTranslation(idx) {
   const section = document.getElementById('sec-' + idx);
   section.querySelector('.translate-revert-btn').style.display = 'none';
   section.querySelector('.translate-status').textContent = '';
+}
+
+// Above this many characters of HTML, one translateCardHtml() call would
+// blow past its ~4,000-token output ceiling and come back truncated.
+const LIVE_TRANSLATE_MAX_HTML = 3500;
+
+// Translates an oversized fragment by splitting it into its direct child
+// elements, translating each (recursively, if a child is itself still too
+// big), and reassembling in place. Text/comment nodes between children are
+// preserved verbatim. Falls back to translating a child whole if it can't
+// be split further.
+async function translateLargeHtml(html, language, statusEl, blockNum, blockTotal) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  const parts = [];
+  for (const node of Array.from(tmp.childNodes)) {
+    if (node.nodeType !== 1) { // text, comment — keep as-is
+      parts.push(node.nodeType === 3 ? escapeForHtml(node.textContent) : outerHtmlOf(node));
+      continue;
+    }
+    const childHtml = node.outerHTML;
+    if (childHtml.length <= LIVE_TRANSLATE_MAX_HTML) {
+      parts.push(await translateCardHtml(childHtml, language));
+    } else if (node.children.length > 0) {
+      // Recurse: rebuild this element with its translated inner content.
+      const innerTranslated = await translateLargeHtml(node.innerHTML, language, statusEl, blockNum, blockTotal);
+      const shell = node.cloneNode(false);
+      shell.innerHTML = innerTranslated;
+      parts.push(shell.outerHTML);
+    } else {
+      // A single leaf element too big to split (e.g. one huge <pre>) —
+      // send it whole and accept whatever comes back rather than skip it.
+      parts.push(await translateCardHtml(childHtml, language).catch(() => childHtml));
+    }
+    if (statusEl) {
+      statusEl.textContent = 'Translating ' + blockNum + ' of ' + blockTotal +
+        ' to ' + language + '… (large card, ' + parts.length + ' parts)';
+    }
+  }
+  return parts.join('');
+}
+
+function outerHtmlOf(node) {
+  const d = document.createElement('div');
+  d.appendChild(node.cloneNode(true));
+  return d.innerHTML;
+}
+function escapeForHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 async function translateCardHtml(html, language) {
