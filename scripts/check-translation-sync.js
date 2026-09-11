@@ -32,8 +32,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
-const { JSDOM } = require('jsdom');
+const { tryDecrypt } = require('./lib/crypto-utils');
+const { hashBlocksOf } = require('./lib/block-hash');
 
 const ROOT = path.join(__dirname, '..');
 const LANGS = ['fr', 'de', 'zh', 'ja', 'ko', 'it'];
@@ -47,41 +47,6 @@ function getBundleKey() {
     if (m) return m[1];
   }
   return null;
-}
-
-function deriveAesKey(passphrase, saltB64) {
-  return crypto.pbkdf2Sync(passphrase, Buffer.from(saltB64, 'base64'), 100000, 32, 'sha256');
-}
-function tryDecrypt(encObj, passphrase) {
-  try {
-    const key = deriveAesKey(passphrase, encObj.salt);
-    const iv = Buffer.from(encObj.iv, 'base64');
-    const raw = Buffer.from(encObj.ct, 'base64');
-    const tag = raw.subarray(raw.length - 16);
-    const ct = raw.subarray(0, raw.length - 16);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
-    decipher.setAuthTag(tag);
-    return Buffer.concat([decipher.update(ct), decipher.final()]).toString('utf8');
-  } catch (e) {
-    return null;
-  }
-}
-function contentHash(text) {
-  return crypto.createHash('sha256').update(text).digest('base64').slice(0, 16);
-}
-
-// Mirrors translate.js's hashBlockElement() exactly, using jsdom for real
-// DOM textContent semantics instead of approximating them with regex.
-const sharedDom = new JSDOM('');
-function hashBlocksOf(plaintextHtml) {
-  const container = sharedDom.window.document.createElement('div');
-  container.innerHTML = plaintextHtml;
-  return Array.from(container.children).map((el) => {
-    const clone = el.cloneNode(true);
-    clone.querySelectorAll('.star-btn').forEach((b) => b.remove());
-    const text = clone.textContent.replace(/\s+/g, ' ').trim();
-    return contentHash(text);
-  });
 }
 
 function main() {
