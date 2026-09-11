@@ -101,6 +101,8 @@ secret store, the same trust boundary `GROQ_API_KEY` already lives in).
 | 1.3.39  | Removed the live Groq API translation fallback entirely (~130 lines). Every offered language is fully pre-translated offline now, so the fallback was pure downside — rate limits and truncated deep-dive cards. A block whose English text changed after its translation was generated now just stays in English and says so. AI Coach chat still uses Groq |
 | —       | (infra) Service-worker cache name is now CI-stamped (`mes-architect-v<commit count>`) instead of hand-edited in sw.js on every ship — the commit before this one, no user-facing version bump |
 | 1.3.42  | Lazy-load translation files — ~10 MB off every cold start. Only a ~10 KB hashes-only manifest loads up front (enough to decide which languages the dropdown offers); the full per-language file (de.js/zh.js are ~4.5 MB each) fetches on demand the first time that language is actually picked, then is cached for offline use |
+| —       | (infra, no app change) Added scripts/check-translation-sync.js — a CI guard that decrypts current English content and fails the build if any shipped translation's hash no longer matches (opt-in via a new MES_BUNDLE_KEY repo secret, see below; skips harmlessly until set) |
+| —       | (infra, no app change) Added the project's first automated test suite — 15 tests (node:test, zero new deps beyond jsdom) covering the AES/PBKDF2 crypto round-trip and the content-hash function, including regression tests pinning the two real hash-desync bugs found this session. Runs in CI before every build |
 
 Each new feature ship gets copied in here too, going forward.
 
