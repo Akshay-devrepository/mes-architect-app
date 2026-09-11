@@ -28,6 +28,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify translations still match the current English content
+        env:
+          MES_BUNDLE_KEY: ${{ secrets.MES_BUNDLE_KEY }}
+        run: node scripts/check-translation-sync.js
+
       - name: Stamp version (git commit count, shared with the Pages deploy)
         run: |
           VERSION_CODE=$(git rev-list --count HEAD)

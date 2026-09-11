@@ -12,6 +12,26 @@ the older ones are gone.
 
 Naming: `MES-Architect-v<version>-<feature>.apk`
 
+## Enabling the translation-sync CI check (optional)
+
+`scripts/check-translation-sync.js` runs in the Build Android APK workflow
+on every push. It decrypts each module's current English content with the
+bundle key, re-hashes it, and fails the build if any shipped translation
+no longer matches — catching a content edit that silently un-translates a
+block before a user ever notices, instead of after. Without a key it just
+prints a warning and passes (so this is safe to leave off).
+
+To turn it on, add the bundle key from `LICENSE-KEYS-SECRET.md` as a repo
+secret named `MES_BUNDLE_KEY`:
+
+```bash
+gh secret set MES_BUNDLE_KEY
+```
+
+(paste the key when prompted — it's the same value already gitignored in
+`LICENSE-KEYS-SECRET.md`, now also held by GitHub Actions' encrypted
+secret store, the same trust boundary `GROQ_API_KEY` already lives in).
+
 | Version | Feature added                          |
 |---------|-----------------------------------------|
 | 1.0.24  | Progress Dashboard                      |

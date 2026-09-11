@@ -25,6 +25,7 @@
     "@capacitor/cli": "^8.4.2",
     "@capacitor/core": "^8.4.2",
     "http-server": "^14.1.1",
+    "jsdom": "^29.1.1",
     "sharp": "^0.35.3"
   },
   "dependencies": {
