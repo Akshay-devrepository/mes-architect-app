@@ -17,19 +17,9 @@ const UNLOCKED_CACHE_KEY = 'mes_unlocked_content_v1'; // { [moduleIndex]: decryp
 const BUNDLE_KEY_CACHE_KEY = 'mes_bundle_key_v1';
 const INDIVIDUAL_KEY_CACHE_KEY = 'mes_individual_keys_v1'; // { [moduleIndex]: rawKey }
 
-// ── Purchase links — fill these in once your Gumroad/LemonSqueezy products
-// exist, then redeploy. This is a plain runtime config (not part of the
-// encryption build step), so you can update prices/links anytime without
-// re-running scripts/encrypt-modules.js or invalidating any keys.
-// Keys are 1-based module numbers to match LICENSE-KEYS-SECRET.md. ──
-const PURCHASE_LINKS = {
-  bundle: null, // e.g. 'https://yourname.gumroad.com/l/mes-architect-bundle'
-  modules: {
-    // 2: 'https://yourname.gumroad.com/l/mes-isa95',
-    // 3: 'https://yourname.gumroad.com/l/mes-isa88',
-    // ...add one per module you sell individually
-  }
-};
+// ── Purchase links now live in assets/purchase-links.js (window.PURCHASE_LINKS),
+// shared with the standalone sales page at buy.html so both "Buy" surfaces
+// read the same config and can't drift. ──
 
 function purchaseLinkFor(moduleIndex) {
   return PURCHASE_LINKS.modules[moduleIndex + 1] || PURCHASE_LINKS.bundle || null;

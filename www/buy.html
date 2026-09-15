@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MES Architect — Get Full Access</title>
+<meta name="description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach and full mock interview mode. The affordable, self-paced way into MES and Industry 4.0 — for less than one seat at a corporate training course.">
+<meta name="theme-color" content="#060b14">
+<link rel="icon" href="icons/icon-192.png">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="MES Architect — Get Full Access">
+<meta property="og:description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach that actually interviews you back.">
+<meta property="og:image" content="https://akshay-devrepository.github.io/mes-architect-app/icons/icon-512.png">
+<meta property="og:url" content="https://akshay-devrepository.github.io/mes-architect-app/buy.html">
+<meta name="twitter:card" content="summary">
+
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060b14;
+  --surface: #0c1526;
+  --surface2: #111e35;
+  --border: #1c2d4a;
+  --border2: #243a5e;
+  --amber: #f59e0b;
+  --amber2: #d97706;
+  --amber-dim: rgba(245,158,11,0.12);
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.1);
+  --green: #10b981;
+  --text: #e2e8f0;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Sora', sans-serif;
+  --display: 'Chakra Petch', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+.tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+h1, h2, h3 { font-family: var(--display); font-weight: 600; color: var(--text); }
+a { color: var(--cyan); }
+
+/* ── Hero ── */
+.hero {
+  padding: 72px 0 56px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(60% 50% at 50% 0%, var(--amber-dim), transparent 70%);
+}
+.hero .tag { display:block; margin-bottom: 18px; }
+.hero h1 {
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+.hero p.sub {
+  color: var(--text-dim);
+  font-size: 16px;
+  max-width: 620px;
+  margin: 0 auto 32px;
+}
+.cta-row { display:flex; flex-direction:column; align-items:center; gap: 14px; }
+.btn-buy {
+  display:inline-block;
+  background: linear-gradient(135deg, var(--amber), var(--amber2));
+  color: #1a1206;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17px;
+  padding: 16px 36px;
+  border-radius: 10px;
+  text-decoration:none;
+  box-shadow: 0 8px 30px rgba(245,158,11,0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-buy:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(245,158,11,0.35); }
+.price-line { font-family: var(--mono); font-size: 13px; color: var(--text-muted); }
+.price-line s { color: var(--text-muted); opacity: 0.6; margin-right: 6px; }
+.price-line strong { color: var(--green); font-size: 15px; }
+.link-secondary {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--border2);
+}
+.link-secondary:hover { color: var(--cyan); }
+
+/* ── Sections ── */
+section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+.section-head { text-align:center; margin-bottom: 36px; }
+.section-head h2 { font-size: 26px; margin-top: 8px; }
+.section-head p { color: var(--text-dim); max-width: 560px; margin: 10px auto 0; }
+
+/* ── Who it's for ── */
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.persona-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.persona-card b { color: var(--text); display:block; margin-bottom: 6px; font-family: var(--display); font-size: 15px; }
+
+/* ── Module grid ── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.module-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.module-card .num { font-family: var(--mono); font-size: 11px; color: var(--amber); letter-spacing: 0.05em; }
+.module-card h3 { font-size: 15px; margin: 4px 0 6px; }
+.module-card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+.module-card.free { border-color: var(--green); background: rgba(16,185,129,0.06); }
+.module-card.free .num { color: var(--green); }
+
+/* ── Feature callouts ── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.feature-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 20px;
+}
+.feature-card .icon { font-size: 22px; margin-bottom: 8px; }
+.feature-card h3 { font-size: 15px; margin-bottom: 6px; }
+.feature-card p { font-size: 13px; color: var(--text-dim); }
+
+/* ── Credibility ── */
+.credibility {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  border-radius: 8px;
+  padding: 22px 26px;
+  font-size: 15px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── Pricing ── */
+.price-card {
+  max-width: 420px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 32px;
+  text-align: center;
+}
+.price-card .plan-name { font-family: var(--mono); font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.06em; }
+.price-card .amount { font-family: var(--display); font-size: 48px; font-weight: 700; margin: 10px 0 2px; }
+.price-card .amount s { font-size: 22px; color: var(--text-muted); margin-right: 10px; }
+.price-card .note { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+.price-card ul { list-style:none; text-align:left; margin: 20px 0 26px; }
+.price-card li { font-size: 14px; color: var(--text-dim); padding: 6px 0; padding-left: 26px; position: relative; }
+.price-card li::before { content: "✓"; position:absolute; left:0; color: var(--green); font-weight:700; }
+.price-card .btn-buy { width: 100%; }
+
+/* ── FAQ ── */
+details {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+summary {
+  font-family: var(--display);
+  font-size: 15px;
+  cursor: pointer;
+  list-style: none;
+}
+summary::-webkit-details-marker { display:none; }
+summary::before { content: "+ "; color: var(--amber); }
+details[open] summary::before { content: "− "; }
+details p { margin-top: 10px; color: var(--text-dim); font-size: 14px; }
+
+/* ── Footer ── */
+footer {
+  padding: 40px 0 60px;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+footer a { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="tag">// MES Architect · Full Access</span>
+    <h1>Everything a $1,000+ MES course covers. For $59.</h1>
+    <p class="sub">16 in-depth modules covering MES, ISA-95, ISA-88, enterprise architecture, cloud migration, integration, and AI in manufacturing — whether you're moving into MES, prepping for an interview, or just tired of Industry 4.0 buzzwords with no architecture underneath.</p>
+    <div class="cta-row">
+      <a class="btn-buy" data-buy-link href="#pricing">Get Full Access — <span data-launch-price>$59</span></a>
+      <span class="price-line"><s data-regular-price>$89</s><strong>Launch price for early buyers</strong></span>
+      <a class="link-secondary" href="index.html">Try Module 1 free, no signup →</a>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">Who this is for</span>
+      <h2>Whatever's pulling you toward MES right now.</h2>
+      <p>Breaking in, upskilling without a formal training budget, or yes — actually about to sit across from someone who's going to ask you to defend the ISA-95 hierarchy.</p>
+    </div>
+    <div class="persona-grid">
+      <div class="persona-card"><b>Automation &amp; controls engineers</b> moving into MES — or who just want the discipline explained properly, not vendor-by-vendor.</div>
+      <div class="persona-card"><b>Manufacturing IT / plant systems staff</b> whose company won't approve a $1,000+ training budget for something they're merely curious about.</div>
+      <div class="persona-card"><b>Systems-integrator consultants</b> who need to sound credible on ISA-95/88 in front of a client, not just a hiring panel.</div>
+      <div class="persona-card"><b>Anyone with an MES interview coming up</b> — the whiteboard "walk me through the ISA-95 hierarchy" moment is still in here. It's just not the only reason to start.</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">What's actually inside</span>
+      <h2>1 free module. 16 that go deep.</h2>
+    </div>
+    <div class="module-grid">
+      <div class="module-card free">
+        <div class="num">FREE · MODULE 01</div>
+        <h3>Learning Roadmap to MES Architect</h3>
+        <p>30/90-day study plans with daily activities and milestones — start here, no purchase needed.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 02</div>
+        <h3>MES Industry Overview</h3>
+        <p>Why MES exists, the three root problems it solves, and the business-value framework that survives budget scrutiny.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 03</div>
+        <h3>ISA-95 — Complete Breakdown</h3>
+        <p>The full five-level hierarchy, object models, and exactly where Level 3 ends and Level 4 begins.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 04</div>
+        <h3>ISA-88 — Batch Control Standard</h3>
+        <p>Physical &amp; procedural models, all four recipe types, and the state model interviewers probe hardest.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 05</div>
+        <h3>MES Functional Architecture</h3>
+        <p>All 15+ MES functional modules — purpose, workflow, data, and integration points for each.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 06</div>
+        <h3>Industry-Specific MES</h3>
+        <p>Pharma GxP, automotive zero-defect traceability, F&amp;B allergen discipline, semiconductor SEMI standards.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 07</div>
+        <h3>Concept Visualizations</h3>
+        <p>Every hierarchy, integration map, and digital thread compressed into diagrams built to replay under pressure.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 08</div>
+        <h3>MES Enterprise Architecture</h3>
+        <p>HA/DR design patterns, RTO/RPO targets, multi-site governance, edge computing trade-offs.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 09</div>
+        <h3>On-Prem to Cloud MES Migration</h3>
+        <p>The 6R framework, zero-downtime cutover, and GxP re-validation most candidates have never executed.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 10</div>
+        <h3>MES Database &amp; Data Modeling</h3>
+        <p>Genealogy graphs, 21 CFR Part 11 audit trails, and the Electronic Batch Record data model.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 11</div>
+        <h3>MES Integration Deep Dive</h3>
+        <p>MES↔ERP, MES↔SCADA/OPC-UA/PLC, MES↔LIMS, MES↔Historian — what breaks, and how you catch it first.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 12</div>
+        <h3>Advanced Topics — UNS, AI, Digital Twin</h3>
+        <p>The real architecture behind Unified Namespace, digital twins, and GenAI in manufacturing.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 13</div>
+        <h3>AI in Manufacturing</h3>
+        <p>Computer-vision inspection, predictive maintenance, AI-driven scheduling, agentic AI in MES.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 14</div>
+        <h3>MES Implementation Lifecycle</h3>
+        <p>Discovery through hypercare — the pressure-test scenarios real implementation leads get asked about.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 15</div>
+        <h3>The Consultant Mindset</h3>
+        <p>Stakeholder handling, workshop facilitation, and objection handling — what separates an expert from a trusted advisor.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 16</div>
+        <h3>AI Interview Coach</h3>
+        <p>A live AI that role-plays as a Senior MES Architect interviewer, plus 100+ questions across ten categories.</p>
+      </div>
+      <div class="module-card">
+        <div class="num">MODULE 17</div>
+        <h3>Mock Interview &amp; Quiz Mode</h3>
+        <p>Spaced-repetition flashcards and timed mock rounds by track, tuned to how you actually forget.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">Built different</span>
+      <h2>Not just another PDF.</h2>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">🤖</div>
+        <h3>AI interview coach</h3>
+        <p>Practice out loud against an AI that actually pushes back, not a static answer key.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🧠</div>
+        <h3>Mind map per module</h3>
+        <p>Every module's structure as a pan/zoomable visual map — for the night-before review.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🌐</div>
+        <h3>Fully bilingual</h3>
+        <p>Every paid module available in Chinese and German, in addition to English.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📱</div>
+        <h3>Web or Android</h3>
+        <p>Works instantly in any browser — install the Android app too if you want it offline.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <!-- EDIT ME: replace this with one or two real sentences on your MES
+         background — what makes this credible coming from you specifically.
+         Left as an honest placeholder rather than a guessed bio. -->
+    <div class="credibility">
+      "[Add one or two sentences here about your MES background — what makes this credible coming from you, specifically.]"
+    </div>
+  </div>
+</section>
+
+<section id="pricing">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">Pricing</span>
+      <h2>One price. Everything unlocked.</h2>
+    </div>
+    <div class="price-card">
+      <div class="plan-name">Full Access</div>
+      <div class="amount"><s data-regular-price>$89</s><span data-launch-price>$59</span></div>
+      <div class="note">One-time payment · launch price, no subscription</div>
+      <ul>
+        <li>All 16 paid modules, unlocked immediately</li>
+        <li>AI interview coach + full mock interview &amp; quiz mode</li>
+        <li>Mind maps for every module</li>
+        <li>Chinese &amp; German translations included</li>
+        <li>Works on web instantly — Android app included</li>
+        <li>One license key, use on any device</li>
+      </ul>
+      <a class="btn-buy" data-buy-link href="#">Get Full Access</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <span class="tag">FAQ</span>
+      <h2>Before you ask</h2>
+    </div>
+    <details>
+      <summary>Do I need to install the Android app?</summary>
+      <p>No. Everything works instantly in your browser, on any device — this page and the app are the same content. Install the Android app later if you want offline access.</p>
+    </details>
+    <details>
+      <summary>How do I get my license after buying?</summary>
+      <p>Your license key is delivered automatically right after checkout. Paste it into the app or site and every paid module unlocks immediately.</p>
+    </details>
+    <details>
+      <summary>Can I use it on more than one device?</summary>
+      <p>Yes — the same key works on any device. Just paste it in again wherever you're studying from.</p>
+    </details>
+    <details>
+      <summary>What if I'm not happy with it?</summary>
+      <p>14-day refund, no questions asked — email <a href="mailto:primeatnit@gmail.com">primeatnit@gmail.com</a>.</p>
+    </details>
+    <details>
+      <summary>What languages are supported?</summary>
+      <p>English, Chinese, and German are fully translated across every paid module. A few other languages currently cover the first couple of modules only.</p>
+    </details>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    MES Architect · <a href="index.html">Try it free</a> · Questions? <a href="mailto:primeatnit@gmail.com">primeatnit@gmail.com</a>
+  </div>
+</footer>
+
+<script>
+  // EDIT ME — your real launch price and the price it reverts to afterward.
+  const LAUNCH_PRICE = 59;
+  const REGULAR_PRICE = 89;
+  document.querySelectorAll('[data-launch-price]').forEach(function (el) { el.textContent = '$' + LAUNCH_PRICE; });
+  document.querySelectorAll('[data-regular-price]').forEach(function (el) { el.textContent = '$' + REGULAR_PRICE; });
+</script>
+<script src="assets/purchase-links.js"></script>
+<script>
+  // Falls back to a mailto so this page works even before a real checkout
+  // link exists in assets/purchase-links.js.
+  var href = (window.PURCHASE_LINKS && window.PURCHASE_LINKS.bundle) ||
+    'mailto:primeatnit@gmail.com?subject=MES%20Architect%20%E2%80%94%20I%20want%20in&body=Send%20me%20a%20way%20to%20pay%20and%20I%27ll%20grab%20full%20access.';
+  document.querySelectorAll('[data-buy-link]').forEach(function (el) { el.href = href; });
+</script>
+</body>
+</html>

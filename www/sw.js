@@ -14,6 +14,7 @@ const APP_SHELL = [
   './assets/mindmap-data.js',
   './assets/mindmap.js',
   './assets/responsive.css',
+  './assets/purchase-links.js',
   './assets/license.js',
   './assets/translations-manifest.js',
   './assets/translate.js',
