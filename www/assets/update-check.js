@@ -11,6 +11,7 @@
 
 (function () {
   const VERSION_URL = 'https://akshay-devrepository.github.io/mes-architect-app/version.json';
+  const TRUSTED_APK_PREFIX = 'https://github.com/Akshay-devrepository/mes-architect-app/releases/';
   const DISMISSED_KEY = 'mes_update_dismissed_version';
   const isNativeBuild = typeof window.APP_VERSION_CODE === 'number' && window.APP_VERSION_CODE > 0;
 
@@ -32,6 +33,10 @@
     document.body.appendChild(banner);
 
     document.getElementById('updateNowBtn').addEventListener('click', () => {
+      // version.json is fetched over the network, so its apkUrl is only
+      // trusted if it points at this repo's own GitHub releases — a tampered
+      // file can't send users to download an APK from anywhere else.
+      if (typeof remote.apkUrl !== 'string' || !remote.apkUrl.startsWith(TRUSTED_APK_PREFIX)) return;
       // "_system" opens the OS's default browser without any extra Capacitor
       // plugin — Android then hands the .apk download to the system Download
       // Manager, exactly like tapping a normal download link.

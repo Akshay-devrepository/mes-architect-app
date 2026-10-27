@@ -7,6 +7,7 @@ const APP_SHELL = [
   './index.html',
   './manifest.json',
   './assets/enhance.css',
+  './assets/fonts/fonts.css',
   './assets/enhance.js',
   './assets/quiz-data.js',
   './assets/glossary-data.js',
