@@ -237,7 +237,7 @@ www/                 the actual web app (this is what ships)
 scripts/
   encrypt-modules.js    build step that locks modules 2-16 behind a license key (see above)
 android/               Capacitor-generated native Android project
-resources/            master icon/splash source images (used by `capacitor-assets`)
+resources/            master icon/splash source images (regenerate with `npx @capacitor/assets generate` — run on demand, not installed)
 LICENSE-KEYS-SECRET.md  the actual keys — gitignored, exists only after you run the script locally
 ```
 

@@ -22,7 +22,6 @@
   "license": "MIT",
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
-    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
     "http-server": "^14.1.1",
