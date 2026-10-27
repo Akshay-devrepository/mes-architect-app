@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MES Architect — Get Full Access</title>
-<meta name="description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach and full mock interview mode. The affordable, self-paced way into MES and Industry 4.0 — for less than one seat at a corporate training course.">
+<meta name="description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach and full mock interview mode. Buy a single module from $9.99, or full access for $99.99. The affordable, self-paced way into MES and Industry 4.0.">
 <meta name="theme-color" content="#060b14">
 <link rel="icon" href="icons/icon-192.png">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="MES Architect — Get Full Access">
-<meta property="og:description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach that actually interviews you back.">
+<meta property="og:description" content="16 in-depth modules on ISA-95, ISA-88, MES architecture, cloud migration, and AI in manufacturing — plus an AI interview coach that actually interviews you back. From $9.99 a module.">
 <meta property="og:image" content="https://akshay-devrepository.github.io/mes-architect-app/icons/icon-512.png">
 <meta property="og:url" content="https://akshay-devrepository.github.io/mes-architect-app/buy.html">
 <meta name="twitter:card" content="summary">
@@ -189,6 +189,42 @@ section { padding: 56px 0; border-bottom: 1px solid var(--border); }
 .price-card li { font-size: 14px; color: var(--text-dim); padding: 6px 0; padding-left: 26px; position: relative; }
 .price-card li::before { content: "✓"; position:absolute; left:0; color: var(--green); font-weight:700; }
 .price-card .btn-buy { width: 100%; }
+.price-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.price-grid .price-card { max-width: none; margin: 0; }
+.price-card.featured { border-color: var(--amber); box-shadow: 0 10px 34px rgba(245,158,11,0.14); }
+.price-card .alt-price {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--cyan);
+  margin-top: 2px;
+}
+.btn-quiet {
+  background: transparent;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  box-shadow: none;
+}
+.btn-quiet:hover { box-shadow: 0 8px 24px rgba(245,158,11,0.18); }
+.savings-note {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 22px;
+}
+.module-price {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--amber);
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
 
 /* ── FAQ ── */
 details {
@@ -225,11 +261,11 @@ footer a { color: var(--text-dim); }
 <div class="hero">
   <div class="wrap">
     <span class="tag">// MES Architect · Full Access</span>
-    <h1>Everything a $1,000+ MES course covers. For $59.</h1>
-    <p class="sub">16 in-depth modules covering MES, ISA-95, ISA-88, enterprise architecture, cloud migration, integration, and AI in manufacturing — whether you're moving into MES, prepping for an interview, or just tired of Industry 4.0 buzzwords with no architecture underneath.</p>
+    <h1>Everything a $1,000+ MES course covers. From <span data-module-price>$9.99</span> a module.</h1>
+    <p class="sub">16 in-depth modules covering MES, ISA-95, ISA-88, enterprise architecture, cloud migration, integration, and AI in manufacturing — whether you're moving into MES, prepping for an interview, or just tired of Industry 4.0 buzzwords with no architecture underneath. Buy the one module you need, or unlock all 16.</p>
     <div class="cta-row">
-      <a class="btn-buy" data-buy-link href="#pricing">Get Full Access — <span data-launch-price>$59</span></a>
-      <span class="price-line"><s data-regular-price>$89</s><strong>Launch price for early buyers</strong></span>
+      <a class="btn-buy" data-buy-link href="#pricing">Get Full Access — <span data-bundle-price>$99.99</span></a>
+      <span class="price-line"><strong>First <span data-seats>100</span> buyers</strong> · price goes up after</span>
       <a class="link-secondary" href="index.html">Try Module 1 free, no signup →</a>
     </div>
   </div>
@@ -380,11 +416,8 @@ footer a { color: var(--text-dim); }
 
 <section>
   <div class="wrap">
-    <!-- EDIT ME: replace this with one or two real sentences on your MES
-         background — what makes this credible coming from you specifically.
-         Left as an honest placeholder rather than a guessed bio. -->
     <div class="credibility">
-      "[Add one or two sentences here about your MES background — what makes this credible coming from you, specifically.]"
+      "Written by an MES practitioner with 6+ years hands-on across Hydra X and ABB MES implementations, SAP integration, OEE and genealogy/traceability — the same material I used to prepare for Solutions Architect interviews."
     </div>
   </div>
 </section>
@@ -393,22 +426,40 @@ footer a { color: var(--text-dim); }
   <div class="wrap">
     <div class="section-head">
       <span class="tag">Pricing</span>
-      <h2>One price. Everything unlocked.</h2>
+      <h2>Buy one module. Or take all 16.</h2>
+      <p data-manual-text="Shown in USD and INR. Click Buy to email me — I'll reply with the price for your region and how to pay.">Shown in USD and INR. Your regional price is applied automatically at checkout.</p>
     </div>
-    <div class="price-card">
-      <div class="plan-name">Full Access</div>
-      <div class="amount"><s data-regular-price>$89</s><span data-launch-price>$59</span></div>
-      <div class="note">One-time payment · launch price, no subscription</div>
-      <ul>
-        <li>All 16 paid modules, unlocked immediately</li>
-        <li>AI interview coach + full mock interview &amp; quiz mode</li>
-        <li>Mind maps for every module</li>
-        <li>Chinese &amp; German translations included</li>
-        <li>Works on web instantly — Android app included</li>
-        <li>One license key, use on any device</li>
-      </ul>
-      <a class="btn-buy" data-buy-link href="#">Get Full Access</a>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="plan-name">Single module</div>
+        <div class="amount"><span data-module-price>$9.99</span></div>
+        <div class="alt-price" data-module-price-inr>₹249 in India</div>
+        <div class="note">One-time · take only what you need</div>
+        <ul>
+          <li>Any one of the 16 paid modules</li>
+          <li>That module's mind map included</li>
+          <li>Chinese &amp; German translations included</li>
+          <li>Works on web and in the Android app</li>
+        </ul>
+        <a class="btn-buy btn-quiet" data-buy-single href="#">Buy a single module</a>
+      </div>
+      <div class="price-card featured">
+        <div class="plan-name">Full access · early bird</div>
+        <div class="amount"><span data-bundle-price>$99.99</span></div>
+        <div class="alt-price" data-bundle-price-inr>₹2,499 in India</div>
+        <div class="note">One-time · first <span data-seats>100</span> buyers, then <span data-bundle-after>$129</span></div>
+        <ul>
+          <li>All 16 paid modules, unlocked immediately</li>
+          <li>AI interview coach + full mock interview &amp; quiz mode</li>
+          <li>Mind maps for every module</li>
+          <li>Chinese &amp; German translations included</li>
+          <li>Works on web instantly — Android app included</li>
+          <li>One license key, use on any device</li>
+        </ul>
+        <a class="btn-buy" data-buy-link href="#">Get Full Access</a>
+      </div>
     </div>
+    <p class="savings-note">All 16 bought one at a time is <span data-sum-price>$159.84</span> — the bundle saves you <span data-savings>37%</span>.</p>
   </div>
 </section>
 
@@ -424,7 +475,15 @@ footer a { color: var(--text-dim); }
     </details>
     <details>
       <summary>How do I get my license after buying?</summary>
-      <p>Your license key is delivered automatically right after checkout. Paste it into the app or site and every paid module unlocks immediately.</p>
+      <p data-manual-text="Clicking Buy opens an email to me. Reply with the module(s) you want and how you'd like to pay, and I'll send your license key directly. Paste it into the app or site and your modules unlock immediately.">Your license key is delivered automatically right after checkout. Paste it into the app or site and every paid module unlocks immediately.</p>
+    </details>
+    <details>
+      <summary>Can I buy just one module?</summary>
+      <p>Yes. Any of the 16 paid modules is <span data-module-price>$9.99</span> on its own (<span data-module-price-inr>₹249 in India</span>), and it unlocks permanently the same way full access does. If you end up wanting most of them, the bundle works out cheaper than about ten modules bought separately.</p>
+    </details>
+    <details>
+      <summary>Why is the price different in India?</summary>
+      <p data-manual-text="Because $99.99 is a very different amount of money depending on where you earn it. India is priced against local purchasing power rather than converted from the dollar price — just mention you're in India when you email, no code needed.">Because $99.99 is a very different amount of money depending on where you earn it. India is priced against local purchasing power rather than converted from the dollar price. Your region is detected at checkout — you don't need a code.</p>
     </details>
     <details>
       <summary>Can I use it on more than one device?</summary>
@@ -448,19 +507,58 @@ footer a { color: var(--text-dim); }
 </footer>
 
 <script>
-  // EDIT ME — your real launch price and the price it reverts to afterward.
-  const LAUNCH_PRICE = 59;
-  const REGULAR_PRICE = 89;
-  document.querySelectorAll('[data-launch-price]').forEach(function (el) { el.textContent = '$' + LAUNCH_PRICE; });
-  document.querySelectorAll('[data-regular-price]').forEach(function (el) { el.textContent = '$' + REGULAR_PRICE; });
+  // EDIT ME — what this page displays. The amount actually charged comes from
+  // the checkout provider's own regional pricing; these strings just have to
+  // match what you configured there.
+  const PRICING = {
+    module:      { usd: '$9.99',  inr: '₹249' },
+    bundle:      { usd: '$99.99', inr: '₹2,499' },
+    bundleAfter: { usd: '$129',   inr: '₹2,999' }
+  };
+  const EARLY_BIRD_SEATS = 100;
+  const PAID_MODULES = 16;
+
+  function setText(selector, text) {
+    document.querySelectorAll(selector).forEach(function (el) { el.textContent = text; });
+  }
+  function toNumber(price) { return parseFloat(price.replace(/[^0-9.]/g, '')); }
+
+  setText('[data-module-price]', PRICING.module.usd);
+  setText('[data-bundle-price]', PRICING.bundle.usd);
+  setText('[data-bundle-after]', PRICING.bundleAfter.usd);
+  setText('[data-module-price-inr]', PRICING.module.inr + ' in India');
+  setText('[data-bundle-price-inr]', PRICING.bundle.inr + ' in India');
+  setText('[data-seats]', EARLY_BIRD_SEATS);
+
+  const sum = toNumber(PRICING.module.usd) * PAID_MODULES;
+  setText('[data-sum-price]', '$' + sum.toFixed(2));
+  setText('[data-savings]', Math.round((1 - toNumber(PRICING.bundle.usd) / sum) * 100) + '%');
+
+  // One price badge per paid module card, rendered from the constant above so
+  // the number lives in exactly one place instead of sixteen.
+  document.querySelectorAll('.module-card:not(.free)').forEach(function (card) {
+    const badge = document.createElement('div');
+    badge.className = 'module-price';
+    badge.textContent = PRICING.module.usd + ' · ' + PRICING.module.inr + ' individually';
+    card.appendChild(badge);
+  });
 </script>
 <script src="assets/purchase-links.js"></script>
 <script>
-  // Falls back to a mailto so this page works even before a real checkout
-  // link exists in assets/purchase-links.js.
-  var href = (window.PURCHASE_LINKS && window.PURCHASE_LINKS.bundle) ||
-    'mailto:primeatnit@gmail.com?subject=MES%20Architect%20%E2%80%94%20I%20want%20in&body=Send%20me%20a%20way%20to%20pay%20and%20I%27ll%20grab%20full%20access.';
-  document.querySelectorAll('[data-buy-link]').forEach(function (el) { el.href = href; });
+  // Until a real checkout link exists in assets/purchase-links.js, Buy opens
+  // a prefilled email, and copy that promises automatic checkout swaps to its
+  // data-manual-text so the page never claims something that isn't live yet.
+  var checkoutLive = !!(window.PURCHASE_LINKS && window.PURCHASE_LINKS.bundle);
+  var mail = 'mailto:primeatnit@gmail.com?subject=';
+  var bundleHref = checkoutLive ? window.PURCHASE_LINKS.bundle :
+    mail + 'MES%20Architect%20%E2%80%94%20Full%20access&body=I%27d%20like%20full%20access%20to%20all%2016%20modules.%20How%20do%20I%20pay%3F';
+  var singleHref = (window.PURCHASE_LINKS && window.PURCHASE_LINKS.singleModule) ||
+    mail +'MES%20Architect%20%E2%80%94%20Single%20module&body=I%27d%20like%20to%20buy%20this%20module%3A%20%0A%0AHow%20do%20I%20pay%3F';
+  document.querySelectorAll('[data-buy-link]').forEach(function (el) { el.href = bundleHref; });
+  document.querySelectorAll('[data-buy-single]').forEach(function (el) { el.href = singleHref; });
+  if (!checkoutLive) {
+    document.querySelectorAll('[data-manual-text]').forEach(function (el) { el.textContent = el.getAttribute('data-manual-text'); });
+  }
 </script>
 </body>
 </html>

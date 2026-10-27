@@ -11,6 +11,9 @@
 // ══════════════════════════════════════════
 const PURCHASE_LINKS = {
   bundle: null, // e.g. 'https://yourname.gumroad.com/l/mes-architect-bundle'
+  // buy.html's "Buy a single module" button — one checkout product with a
+  // module picker (e.g. a Gumroad product with one variant per module).
+  singleModule: null,
   modules: {
     // 2: 'https://yourname.gumroad.com/l/mes-isa95',
     // 3: 'https://yourname.gumroad.com/l/mes-isa88',
