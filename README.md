@@ -254,7 +254,7 @@ from the browser (CORS-enabled, no backend needed) during development.
    card). Create an API key.
 2. Add it as a **GitHub Actions secret** named `GROQ_API_KEY` — repo
    **Settings → Secrets and variables → Actions → New repository secret**.
-   Do **not** paste it directly into `www/index.html` — that file has a
+   Do **not** paste it directly into `www/assets/app.js` — that file has a
    `__GROQ_API_KEY__` placeholder that both CI workflows substitute with
    the real secret at build time, so the actual key only ever ends up in
    the deployed Pages site / built APK, never in git history or the
@@ -265,7 +265,7 @@ from the browser (CORS-enabled, no backend needed) during development.
    End users never see any sign-in prompt.
 
 **Models and free-tier limits.** The chat tries `GROQ_MODELS` in order
-(top of the AI CHAT block in `index.html`) and falls through to the next on
+(top of the AI CHAT block in `www/assets/app.js`) and falls through to the next on
 any error except a bad key. Free limits are *per model* (8,000 tokens/minute
 — confirmed from Groq's own 413 response — and roughly 1,000 requests /
 200K tokens a day), so the fallback chain also triples daily capacity, and a

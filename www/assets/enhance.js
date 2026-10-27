@@ -762,7 +762,7 @@ function renderHomeStats() {
   if (!el) return;
   const stats = computeProgressStats();
   el.innerHTML = '<div class="home-stats-row">' + homeStatsHtml(stats) +
-    '</div><a class="home-stat-link" onclick="showSection(19)">View full progress →</a>';
+    '</div><a class="home-stat-link" data-onclick="showSection(19)">View full progress →</a>';
 }
 window.renderHomeStats = renderHomeStats;
 

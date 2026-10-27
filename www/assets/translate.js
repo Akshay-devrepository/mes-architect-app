@@ -328,7 +328,7 @@ async function translateModule(idx) {
     statusEl.textContent = 'Translating ' + (i + 1) + ' of ' + blocks.length + ' to ' + language + '…';
     const pretranslated = await tryPretranslatedBlock(idx, i, block, language).catch(() => null);
     if (pretranslated) {
-      block.innerHTML = pretranslated;
+      block.innerHTML = window.neutralizeInlineHandlers(pretranslated);
       translatedCount++;
       continue;
     }

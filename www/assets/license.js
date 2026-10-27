@@ -203,7 +203,7 @@ function saveUnlockedCache(map) {
 
 function revealModule(gate, plaintext) {
   const unlockedDiv = gate.nextElementSibling;
-  unlockedDiv.innerHTML = plaintext;
+  unlockedDiv.innerHTML = window.neutralizeInlineHandlers(plaintext);
   unlockedDiv.style.display = '';
   gate.style.display = 'none';
   gate.classList.add('unlocked');
@@ -373,7 +373,7 @@ function addGlobalLicenseUI() {
     '<div class="global-license-label">🔑 Have a license key?</div>' +
     '<div class="global-license-input-row">' +
       '<input type="text" id="globalLicenseInput" placeholder="Paste key" autocomplete="off" autocapitalize="off" spellcheck="false">' +
-      '<button onclick="tryGlobalUnlock()">Apply</button>' +
+      '<button data-onclick="tryGlobalUnlock()">Apply</button>' +
     '</div>' +
     '<div class="global-license-hint">Same key works on any device — just paste it again here.</div>' +
     '<div id="globalLicenseStatus" class="global-license-status"></div>';
