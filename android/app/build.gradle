@@ -1,5 +1,30 @@
 apply plugin: 'com.android.application'
 
+// ── Release signing ─────────────────────────────────────────────────────
+// Credentials come from android/keystore.properties locally, or MES_KEYSTORE_*
+// environment variables in CI. Neither the keystore nor its passwords are ever
+// committed. Paths in `storeFile` are relative to android/ (or absolute).
+//
+//   storeFile=release.jks
+//   storePassword=...
+//   keyAlias=mes-architect
+//   keyPassword=...
+//
+// When nothing is configured, release builds stay UNSIGNED rather than failing
+// the build — a fresh clone with no secrets can still run assembleDebug. CI
+// checks for the signed artifact by name, so a misconfigured key can't silently
+// ship an unsigned APK to a store.
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+def releaseStoreFile = keystoreProps['storeFile'] ?: System.getenv('MES_KEYSTORE_FILE')
+def releaseStorePassword = keystoreProps['storePassword'] ?: System.getenv('MES_KEYSTORE_PASSWORD')
+def releaseKeyAlias = keystoreProps['keyAlias'] ?: System.getenv('MES_KEY_ALIAS')
+def releaseKeyPassword = keystoreProps['keyPassword'] ?: System.getenv('MES_KEY_PASSWORD')
+def hasReleaseSigning = releaseStoreFile != null && rootProject.file(releaseStoreFile).exists()
+
 android {
     namespace = "com.mesarchitect.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -29,6 +54,14 @@ android {
             keyPassword 'android'
             storeType 'PKCS12'
         }
+        if (hasReleaseSigning) {
+            release {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
     }
     buildTypes {
         debug {
@@ -37,6 +70,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

@@ -15,6 +15,17 @@ android/.gradle/
 android/local.properties
 android/captures/
 android/app/release/
+
+# Release signing. Lose the keystore and you can never publish an update to
+# this app on any store again — back it up somewhere outside this repo.
+# Commit it and anyone who reads the repo can ship an update as you.
+# android/app/debug.keystore is the deliberate exception: it's the universal
+# Android debug key, committed so every CI build can update the last one.
+android/keystore.properties
+*.jks
+*.keystore
+!android/app/debug.keystore
+
 *.apk
 *.aab
 .DS_Store
