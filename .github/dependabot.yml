@@ -1,0 +1,22 @@
+# Weekly dependency PRs. Grouped so routine bumps arrive as one PR per
+# ecosystem instead of one per package. Security fixes are raised
+# separately and immediately by Dependabot security updates.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  # Keeps the SHA-pinned actions (and their "# vX.Y.Z" comments) current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
