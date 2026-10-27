@@ -2401,11 +2401,24 @@ function toggleAnswer(el) {
 // and the chat shows a clear "not configured" message instead of failing
 // silently or leaking a broken request.
 const GROQ_API_KEY = '__GROQ_API_KEY__';
-// Used only by the AI Coach chat now — module translation is fully
-// pre-generated offline and no longer calls any API (see translate.js).
-// llama-3.3-70b-versatile is retired by Groq (free/dev tier shutdown
-// 2026-08-16) — migrated to its official recommended replacement.
-const GROQ_MODEL = 'openai/gpt-oss-120b';
+// Tried in order — the first that answers wins. Each Groq model has its own
+// free-tier quota (~1,000 requests / 200K tokens a day), so falling through
+// also multiplies daily capacity, and a retired model degrades to the next
+// one instead of breaking the chat (llama-3.3-70b's 2026-08-16 shutdown did).
+// qwen3.8-27b is first because it gave the most interview-relevant coaching,
+// fastest, in a head-to-head test — but it's a Groq *preview* model, which
+// can be pulled at short notice, hence the production gpt-oss models behind
+// it. Reasoning is off/low on all three: hidden reasoning tokens count
+// against the output budget and were truncating answers mid-sentence.
+const GROQ_MODELS = [
+  { id: 'qwen/qwen3.8-27b', params: { reasoning_effort: 'none' } },
+  { id: 'openai/gpt-oss-120b', params: { reasoning_effort: 'low' } },
+  { id: 'openai/gpt-oss-20b', params: { reasoning_effort: 'low' } }
+];
+const AI_MAX_OUTPUT_TOKENS = 2000;
+// Keeps each request well under Groq's free 8K tokens-per-minute cap, which
+// counts prompt + max output — an untrimmed history fails long chats with 413.
+const AI_HISTORY_CHAR_BUDGET = 10000;
 
 // ── Client-side topic gate ──
 // Cheap first pass before ever calling the AI: if nothing here matches,
@@ -2524,7 +2537,45 @@ function isManufacturingQuery(userMessage) {
 const OFF_TOPIC_REFUSAL = "I'm specialized in Digital Manufacturing and MES. Please ask questions related to Manufacturing Execution Systems, Industry 4.0, Smart Manufacturing, or industrial automation.";
 
 const conversationHistory = [];
+// The keyword gate only screens how a conversation *starts*. Mid-interview
+// replies ("continue", "score my answer", a plain-English answer) rarely
+// contain manufacturing keywords and were being refused; once a topic is
+// established, the system prompt alone keeps follow-ups in scope.
+let conversationOnTopic = false;
 let isLoading = false;
+
+function recentHistory() {
+  const kept = [];
+  let chars = 0;
+  for (let i = conversationHistory.length - 1; i >= 0; i--) {
+    chars += conversationHistory[i].content.length;
+    if (chars > AI_HISTORY_CHAR_BUDGET && kept.length) break;
+    kept.unshift(conversationHistory[i]);
+  }
+  return kept;
+}
+
+async function openGroqStream(messages) {
+  let lastErr = null;
+  for (const m of GROQ_MODELS) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
+      body: JSON.stringify(Object.assign({
+        model: m.id,
+        messages,
+        temperature: 0.4,
+        max_completion_tokens: AI_MAX_OUTPUT_TOKENS,
+        stream: true
+      }, m.params))
+    });
+    if (res.ok) return res;
+    const errBody = await res.json().catch(() => null);
+    lastErr = new Error((errBody && errBody.error && errBody.error.message) || ('HTTP ' + res.status));
+    if (res.status === 401 || res.status === 403) break; // bad key — same for every model
+  }
+  throw lastErr;
+}
 
 function addMessage(role, text) {
   const container = document.getElementById('aiMessages');
@@ -2575,7 +2626,7 @@ async function sendMessage() {
 
   // Cheap keyword gate — skip the network call entirely for obviously
   // off-topic questions instead of spending an AI call on them.
-  if (!isManufacturingQuery(text)) {
+  if (!conversationOnTopic && !isManufacturingQuery(text)) {
     conversationHistory.push({ role: 'user', content: text });
     conversationHistory.push({ role: 'assistant', content: OFF_TOPIC_REFUSAL });
     addMessage('ai', OFF_TOPIC_REFUSAL);
@@ -2584,6 +2635,7 @@ async function sendMessage() {
     return;
   }
 
+  conversationOnTopic = true;
   conversationHistory.push({ role: 'user', content: text });
   showTyping();
 
@@ -2631,21 +2683,7 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
     // prefix-checking the key format instead can't have that problem.
     if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) throw new Error('groq-not-configured');
 
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_API_KEY },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [{ role: 'system', content: systemPrompt }, ...conversationHistory],
-        temperature: 0.4,
-        max_tokens: 900,
-        stream: true
-      })
-    });
-    if (!res.ok) {
-      const errBody = await res.json().catch(() => null);
-      throw new Error((errBody && errBody.error && errBody.error.message) || ('HTTP ' + res.status));
-    }
+    const res = await openGroqStream([{ role: 'system', content: systemPrompt }, ...recentHistory()]);
 
     // Headers are back and the request is genuinely streaming now — swap
     // the typing dots for a live bubble that fills in as tokens arrive,
@@ -2657,6 +2695,7 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let finishReason = null;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -2673,7 +2712,9 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
 
         let json;
         try { json = JSON.parse(payload); } catch (e) { continue; }
-        const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+        const choice = json.choices && json.choices[0];
+        if (choice && choice.finish_reason) finishReason = choice.finish_reason;
+        const delta = choice && choice.delta && choice.delta.content;
         if (delta) {
           fullText += delta;
           bubble.textContent = fullText;
@@ -2684,6 +2725,9 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
 
     if (!fullText) throw new Error('empty-response');
     conversationHistory.push({ role: 'assistant', content: fullText });
+    if (finishReason === 'length') {
+      bubble.textContent = fullText + '\n\n[Answer hit the length limit — reply "continue" for the rest.]';
+    }
   } catch (err) {
     removeTyping();
     if (bubble && fullText) {

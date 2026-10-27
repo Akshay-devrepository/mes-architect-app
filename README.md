@@ -7,7 +7,7 @@ An interactive study app for MES / ISA-95 / ISA-88 / manufacturing architecture 
 - **16 concept modules** — ISA-95, ISA-88, MES functional modules, enterprise architecture, cloud migration, database design, implementation lifecycle, industry-specific MES, AI in manufacturing, and more.
 - **★ Bookmarks** — star any concept card or interview question; revisit them all from the **Saved** tab.
 - **Quiz Mode** — every "Show Consultant Answer" question on the board, plus a hand-written set of calculation drills, acronym checks, and compare/contrast cards, turned into a flip-card deck. Rate yourself after each card; unmastered ones resurface until you get them.
-- **AI doubt-solver** — an interactive chat coach built into Module 16 ("AI Interview Coach," a paid module) powered by [Groq](https://console.groq.com/) (Llama 3.3 70B), genuinely free to run with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below. The floating "ASK AI" button jumps straight there, showing the license gate if it isn't unlocked yet.
+- **AI doubt-solver** — an interactive chat coach built into Module 16 ("AI Interview Coach," a paid module) powered by [Groq](https://console.groq.com/) (Qwen3.8 27B, with automatic fallback to GPT-OSS 120B / 20B), genuinely free to run with no sign-in or confirmation shown to the end user. Scoped to MES/manufacturing topics only via a keyword pre-filter plus a strict system prompt — see "AI chat setup" below. The floating "ASK AI" button jumps straight there, showing the license gate if it isn't unlocked yet.
 - **Installable** — add-to-home-screen as a PWA, or install the built APK directly on Android.
 - **In-app update checks** — the installed Android app checks for a newer build the moment it has an internet connection (on launch and again the instant connectivity returns) and prompts you to update if one's available. The plain website doesn't nag about this — it stays current on its own via the service worker.
 - **Licensed modules** — module 1 is a free trial; modules 2–16 are encrypted and unlock with a license key, sold per-module or as a full bundle. See "Selling licensed access" below.
@@ -262,9 +262,19 @@ from the browser (CORS-enabled, no backend needed) during development.
    contains a real-looking key, which is exactly what caught this during
    development — pasting it into the source directly doesn't work anyway.)
 3. Push (or re-run the workflows) and both builds pick it up automatically.
-   End users never see any sign-in prompt. Free tier is generous (30
-   requests/minute, 14,400/day at time of writing) — plenty for this use
-   case.
+   End users never see any sign-in prompt.
+
+**Models and free-tier limits.** The chat tries `GROQ_MODELS` in order
+(top of the AI CHAT block in `index.html`) and falls through to the next on
+any error except a bad key. Free limits are *per model* (8,000 tokens/minute
+— confirmed from Groq's own 413 response — and roughly 1,000 requests /
+200K tokens a day), so the fallback chain also triples daily capacity, and a
+retired model degrades to the next instead of breaking the chat. All users
+share one key, so these are app-wide limits. The 8K tokens/minute cap counts
+prompt + max output, which is why history is trimmed to the most recent
+~10K characters per request. To re-check what's available, call
+`GET https://api.groq.com/openai/v1/models` with the key — Groq retires
+models often (Llama 3.3 70B went 2026-08-16).
 
 **Heads up on the key still being in the deployed output:** since this is a
 static app with no backend, the *built* site/APK does contain the real key
@@ -284,7 +294,10 @@ Two layers, per the brief this was built to:
    `isManufacturingQuery()`, right above `GROQ_API_KEY`) — a cheap
    substring check that skips the network call entirely for obviously
    off-topic questions, replying with the fixed refusal message. Extend the
-   keyword list as you add more modules/vendors/protocols.
+   keyword list as you add more modules/vendors/protocols. It only screens
+   the *first* message of a conversation — mid-interview replies
+   ("continue", "score my answer", a plain-English answer) rarely contain
+   keywords and used to be refused, breaking multi-turn mock interviews.
 2. **System prompt** — a second, more precise pass: even a question that
    slips past the keyword filter (e.g. "quality of life", which matches on
    "quality") gets refused by the model itself if it isn't really about
