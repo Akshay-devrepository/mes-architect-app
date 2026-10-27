@@ -270,12 +270,25 @@ function nextDueInWords(schedule, deck) {
 // ("...missed step)OOS (Out of Specification)...") — inserting a space
 // after each block tag's closing tag before stripping markup fixes that
 // for the plain-text flip-card view without touching the rendered HTML.
+// Walks an inert <template> (no script runs, nothing loads) rather than
+// regex-stripping tags, so entities decode properly ("F&amp;B" -> "F&B")
+// instead of showing up literally on the card.
+const PLAIN_BLOCK_TAGS = /^(P|DIV|H[1-6])$/;
 function htmlToPlainText(html) {
-  return html
-    .replace(/<\/(p|div|h[1-6])>/gi, '\n\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<li>/gi, '• ')
-    .replace(/<[^>]+>/g, '')
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  let out = '';
+  (function walk(node) {
+    node.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE) { out += n.nodeValue; return; }
+      if (n.nodeType !== Node.ELEMENT_NODE) return;
+      if (n.tagName === 'LI') out += '• ';
+      walk(n);
+      if (PLAIN_BLOCK_TAGS.test(n.tagName)) out += '\n\n';
+      else if (n.tagName === 'LI') out += '\n';
+    });
+  })(tpl.content);
+  return out
     .replace(/[ \t]+/g, ' ')
     .replace(/\n[ \t]+/g, '\n')
     .replace(/\n{3,}/g, '\n\n')

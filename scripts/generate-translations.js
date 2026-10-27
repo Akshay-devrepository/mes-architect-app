@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const crypto = require('crypto');
+const { hashBlocksOf } = require('./lib/block-hash');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
@@ -63,27 +64,11 @@ function encrypt(plaintext, passphrase) {
   const tag = cipher.getAuthTag();
   return { salt: salt.toString('base64'), iv: iv.toString('base64'), ct: Buffer.concat([ct, tag]).toString('base64') };
 }
-// Hashes the NORMALIZED TEXT of a card, not its raw HTML — a browser
-// reserializes markup on DOM round-trip (attribute quoting, entity
-// encoding, etc.), so hashing exact bytes would make the runtime
-// staleness check in translate.js spuriously fail even when nothing
-// meaningful changed. Mirrors what element.textContent produces: strip
-// tags to EMPTY (not a space) — real textContent never synthesizes
-// whitespace at a tag boundary, so adjacent cells written with no source
-// whitespace between them (e.g. "<td>A</td><td>B</td>") concatenate with
-// no space too. Whatever whitespace ends up in the result is only what
-// was already real text in the source (indentation/newlines between
-// block-level tags), which the trailing collapse then normalizes.
-function textContentApprox(html) {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+// Same jsdom-based hash the app and the CI guard use (lib/block-hash.js) —
+// real DOM textContent, not a regex approximation. Regex versions of this
+// caused two real hash-desync bugs earlier in this project.
 function contentHash(html) {
-  return crypto.createHash('sha256').update(textContentApprox(html)).digest('base64').slice(0, 16);
+  return hashBlocksOf("<div>" + html + "</div>")[0];
 }
 
 function parseExistingKeys(mdText) {

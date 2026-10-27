@@ -253,6 +253,8 @@ window.addEventListener('popstate', (e) => {
 });
 
 function buildHomeCards() {
+  // Runs while app.js is still loading — before enhance.js's escapeHtml exists.
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const grid = document.getElementById('homeGrid');
   const lockedCount = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
   const cacheKey = visitedSections.size + ':' + lockedCount;
@@ -276,15 +278,15 @@ function buildHomeCards() {
     card.innerHTML =
       '<div class="home-card-icon">' + HOME_ICONS[i] + '</div>' +
       '<div class="home-card-body">' +
-        '<div class="home-card-tag">' + tag +
+        '<div class="home-card-tag">' + esc(tag) +
           (locked ? ' <span class="home-card-locked">🔒 locked</span>' : '') +
           (justUnlocked ? ' <span class="home-card-unlocked">🔓 unlocked</span>' : '') +
           (done ? ' <span class="home-card-done">✓ visited</span>' : '') + '</div>' +
-        '<div class="home-card-title">' + title + '</div>' +
-        '<div class="home-card-desc">' + desc + '</div>' +
+        '<div class="home-card-title">' + esc(title) + '</div>' +
+        '<div class="home-card-desc">' + esc(desc) + '</div>' +
         (locked
           ? (buyLink
-              ? '<a class="home-card-buy" href="' + buyLink + '" target="_blank" rel="noopener">💳 Purchase Access</a>'
+              ? '<a class="home-card-buy" href="' + esc(buyLink) + '" target="_blank" rel="noopener">💳 Purchase Access</a>'
               : '<button class="home-card-buy home-card-buy-request" type="button">💳 Purchase Access</button>')
           : '') +
       '</div>' +
