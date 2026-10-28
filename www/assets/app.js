@@ -732,9 +732,15 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
     // used for comparison, which would silently rewrite the check into
     // "realKey === realKey" (always true). Bit us in production once;
     // prefix-checking the key format instead can't have that problem.
-    if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) throw new Error('groq-not-configured');
-
-    const res = await openGroqStream([{ role: 'system', content: systemPrompt }, ...recentHistory()]);
+    let res;
+    if (window.MESAccount) {
+      // Backend mode: the Worker holds the Groq key and builds the system
+      // prompt itself; the app only sends the conversation and the level.
+      res = await window.MESAccount.chat(recentHistory(), getAiLevel() || 'unknown');
+    } else {
+      if (!GROQ_API_KEY || !GROQ_API_KEY.startsWith('gsk_')) throw new Error('groq-not-configured');
+      res = await openGroqStream([{ role: 'system', content: systemPrompt }, ...recentHistory()]);
+    }
 
     // Headers are back and the request is genuinely streaming now — swap
     // the typing dots for a live bubble that fills in as tokens arrive,
@@ -788,7 +794,15 @@ Respond in a confident, direct consulting style. No hedging. Real expertise.`;
       conversationHistory.push({ role: 'assistant', content: fullText });
     } else {
       if (bubble) bubble.parentElement.remove(); // drop the empty bubble the stream never filled in
-      if (err && err.message === 'groq-not-configured') {
+      const ACCOUNT_ERRORS = {
+        'sign-in-required': 'Sign in (menu → Your account) with the email you bought with to use the AI coach.',
+        'email_not_verified': 'Verify your email first — check your inbox, then tap “I’ve verified” in the menu.',
+        'not_entitled': 'The AI coach is part of the AI Interview Coach module (or the full bundle).',
+        'daily_ai_limit': 'You’ve reached today’s AI coach limit — it resets at midnight UTC.'
+      };
+      if (err && ACCOUNT_ERRORS[err.message]) {
+        addMessage('ai', ACCOUNT_ERRORS[err.message]);
+      } else if (err && err.message === 'groq-not-configured') {
         addMessage('ai', 'The AI engine isn’t set up yet — the app owner needs to add a free Groq API key (see the README). No sign-in needed on your end once it is.');
       } else {
         addMessage('ai', 'The AI had trouble responding (' + (err && err.message ? err.message : 'unknown error') + '). Please check your connection and try again.');

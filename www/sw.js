@@ -20,6 +20,8 @@ const APP_SHELL = [
   './assets/responsive.css',
   './assets/purchase-links.js',
   './assets/license.js',
+  './assets/backend-config.js',
+  './assets/account.js',
   './assets/translations-manifest.js',
   './assets/translate.js',
   './assets/build-version.js',

@@ -1,0 +1,6 @@
+{
+  "name": "mes-architect-api",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker: accounts, entitlements, content delivery and the AI proxy for MES Architect."
+}

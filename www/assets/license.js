@@ -264,6 +264,25 @@ async function attemptUnlockModule(gate, keyInput) {
   return true;
 }
 
+// Account-based unlock (assets/account.js): content comes from the API
+// already decrypted, and goes through the same reveal + offline cache.
+function revealModuleFromServer(section, html) {
+  const gate = document.querySelector('.locked-gate[data-module="' + section + '"]');
+  if (!gate || gate.classList.contains('unlocked')) return;
+  const cache = loadUnlockedCache();
+  cache[section] = html;
+  saveUnlockedCache(cache);
+  revealModule(gate, html);
+}
+window.revealModuleFromServer = revealModuleFromServer;
+
+function forgetUnlockedModules(sections) {
+  const cache = loadUnlockedCache();
+  sections.forEach((s) => { delete cache[s]; });
+  saveUnlockedCache(cache);
+}
+window.forgetUnlockedModules = forgetUnlockedModules;
+
 // The raw AES passphrase that successfully unlocked a given module, if
 // still available — either its own individual key, or the bundle key
 // (reconstructed the same way attemptUnlockModule() derives it). Used to

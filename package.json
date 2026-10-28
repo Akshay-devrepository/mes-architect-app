@@ -8,7 +8,7 @@
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
     "cap:build": "cd android && gradlew.bat assembleDebug",
-    "test": "node --test scripts/__tests__/*.test.js"
+    "test": "node --disable-warning=ExperimentalWarning --test scripts/__tests__/*.test.js backend/test/*.test.mjs"
   },
   "keywords": [
     "mes",

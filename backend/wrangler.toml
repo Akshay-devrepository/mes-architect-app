@@ -1,0 +1,30 @@
+name = "mes-architect-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mes-architect"
+database_id = "REPLACE_WITH_ID_FROM_wrangler_d1_create"
+
+[[r2_buckets]]
+binding = "CONTENT"
+bucket_name = "mes-content"
+
+[vars]
+FIREBASE_PROJECT_ID = "REPLACE_WITH_FIREBASE_PROJECT_ID"
+# Origins allowed to call the API: the website, the Android app (Capacitor
+# serves it from https://localhost), and the local dev server.
+ALLOWED_ORIGINS = "https://akshay-devrepository.github.io,https://localhost,http://localhost:5975"
+# Lemon Squeezy variant id -> "bundle" | "module-NN" | "module-choice"
+# ("module-choice": one single-module variant; which module comes from the
+# checkout's custom data — the price paid can never buy more than one module).
+LS_VARIANTS = "{}"
+# Razorpay prices in paise. The amount actually captured decides bundle vs
+# single module, so editing form fields at checkout can't upgrade a purchase.
+RAZORPAY_PRICES = "{\"bundle\":249900,\"module\":24900}"
+AI_DAILY_LIMIT = "60"
+CONTENT_DAILY_LIMIT = "300"
+
+# Secrets — set with `npx wrangler secret put <NAME>`, never in this file:
+#   GROQ_API_KEY, RAZORPAY_WEBHOOK_SECRET, LEMONSQUEEZY_WEBHOOK_SECRET

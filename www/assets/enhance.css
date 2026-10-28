@@ -1383,3 +1383,51 @@ body.search-open #searchPanel { opacity: 1; pointer-events: auto; transform: tra
   .progress-row:not(.progress-row-head) { border-bottom: 1px solid var(--border); padding: 10px 12px; }
 }
 
+
+/* ── ACCOUNT (assets/account.js) ── */
+#accountBox {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.account-fields { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.account-fields input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 7px 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text);
+  outline: none;
+}
+.account-fields input:focus { border-color: var(--amber); }
+.account-actions button { flex: 1; }
+.global-license-input-row button.account-secondary {
+  background: transparent;
+  border: 1px solid var(--amber);
+  color: var(--amber);
+}
+.account-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.account-email { font-family: var(--mono); font-size: 11px; color: var(--text); word-break: break-all; }
+
+/* Licensee line the API appends to each served module (see backend/src/content.js). */
+.licensee-mark {
+  margin-top: 28px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+}

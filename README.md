@@ -69,6 +69,16 @@ Both CI workflows stamp the **same version number** — `git rev-list --count HE
 
 `www/assets/update-check.js` runs only when `APP_VERSION_CODE > 0` (i.e. only inside the installed app, never on the plain website). It fetches `version.json` fresh (no-cache) on launch and again the instant the `online` event fires, and shows an in-app banner with an **Update Now** button (opens the OS browser to the latest GitHub Release APK — no extra native plugin needed) whenever the live version is newer than the installed one. There's also a manual "Check for updates" link in the sidebar footer.
 
+## Accounts & server-side access (backend/)
+
+`backend/` is a Cloudflare Worker that replaces the shared-license-key model below
+with buyer accounts: email sign-in, Razorpay / Lemon Squeezy webhooks that grant
+access automatically, modules served only to verified owners (watermarked per buyer),
+refunds that revoke access, and the AI coach proxied so the Groq key never ships in
+the app. It's built and tested but **switched off** until deployed — while
+`www/assets/backend-config.js` has `apiBase: null` the app behaves exactly as described
+below. Go-live runbook: [backend/README.md](backend/README.md).
+
 ## Selling licensed access
 
 Modules 2–16 ship **encrypted** inside `www/index.html` (AES-256-GCM via the

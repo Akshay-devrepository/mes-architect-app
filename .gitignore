@@ -30,3 +30,6 @@ android/keystore.properties
 *.aab
 .DS_Store
 Thumbs.db
+
+# Decrypted module content staged for upload to R2 — plaintext, never commit.
+backend/.content-export/

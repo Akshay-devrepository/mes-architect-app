@@ -46,7 +46,9 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          if [ -n "$GROQ_API_KEY" ]; then
+          if grep -q "apiBase: 'https" www/assets/backend-config.js; then
+            echo "Backend mode is on — the Groq key stays in the Worker, not the public bundle."
+          elif [ -n "$GROQ_API_KEY" ]; then
             sed -i "s#__GROQ_API_KEY__#$GROQ_API_KEY#" www/assets/app.js
           else
             echo "::warning::GROQ_API_KEY secret not set — AI chat will show its 'not configured' message."

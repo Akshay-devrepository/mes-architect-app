@@ -82,7 +82,7 @@ async function contentHashBrowser(text) {
 // ever, as a separate concern from body content).
 function getTranslatableBlocks(section) {
   const container = section.querySelector('.unlocked-content') || section;
-  return Array.from(container.children).filter((el) => !el.classList.contains('section-header'));
+  return Array.from(container.children).filter((el) => !el.classList.contains('section-header') && !el.classList.contains('licensee-mark'));
 }
 
 // enhance.js's injectStars() appends a .star-btn bookmark toggle inside
@@ -131,6 +131,17 @@ function ensurePretranslatedLang(langCode) {
 async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
   const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
   if (!langCode) return null;
+
+  // Unlocked through an account: the API serves this module's translations
+  // already decrypted, no license key involved. Same staleness check.
+  const hasKey = window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx);
+  if (!hasKey && window.MESAccount && window.MESAccount.ownsSection(idx)) {
+    const blocks = await window.MESAccount.translation(idx, langCode).catch(() => null);
+    const served = blocks && blocks[blockPosition];
+    if (!served || (await hashBlockElement(blockEl)) !== served.hash) return null;
+    return served.html;
+  }
+
   try { await ensurePretranslatedLang(langCode); } catch (e) { return null; }
   const table = window['PRETRANSLATED_' + langCode.toUpperCase()];
   const entries = table && table[idx];
@@ -170,7 +181,8 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
 // "re-enter your key" instead of "not available yet".
 async function getFullyCoveredLanguages(idx, blocks) {
   const covered = [];
-  const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx));
+  const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx)) ||
+    !!(window.MESAccount && window.MESAccount.ownsSection(idx));
   if (!hasUnlockKey) return { covered, hasUnlockKey };
   const manifest = window.PRETRANSLATED_MANIFEST || {};
   for (const [language, langCode] of Object.entries(PRETRANSLATED_LANGUAGE_CODES)) {
@@ -310,7 +322,11 @@ async function translateModule(idx) {
   // so this only actually downloads the first time this language is picked
   // on this device.
   const langCode = PRETRANSLATED_LANGUAGE_CODES[language];
-  if (langCode && !window['PRETRANSLATED_' + langCode.toUpperCase()]) {
+  // Unlocked through an account: translations come from the API per module,
+  // so the whole-language encrypted file isn't needed.
+  const viaAccount = !(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx)) &&
+    !!(window.MESAccount && window.MESAccount.ownsSection(idx));
+  if (langCode && !viaAccount && !window['PRETRANSLATED_' + langCode.toUpperCase()]) {
     statusEl.textContent = 'Loading ' + language + ' translations…';
     try {
       await ensurePretranslatedLang(langCode);
