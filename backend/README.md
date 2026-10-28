@@ -130,6 +130,20 @@ export afterwards); set `GROQ_API_KEY` in the environment for real AI replies.
 `schema.sql`), real RS256 tokens and real HMAC signatures — including forged tokens,
 forged webhooks, checkout tampering, prompt injection and rate limits.
 
+## Security notes (accepted risks)
+
+- **Refresh token in localStorage** (CodeQL `js/clear-text-storage-of-sensitive-data`).
+  Same place Firebase's own SDK keeps it. Encrypting it in the browser would be
+  cosmetic — any script able to read it could also use a browser-held key or just
+  act as the page. Mitigations: strict CSP (no inline script, allowlisted handlers),
+  1-hour ID tokens, refresh tokens die on password change / account disable, Android
+  backups excluded. Proper fix: an httpOnly cookie session, which needs the app and
+  API on one custom domain (Phase C).
+- **Content a buyer can read can be copied.** The goal is no free path, traceable
+  copies (licensee line) and revocable access — not impossibility.
+- **License keys still work** until the encrypted modules are removed from the public
+  bundle (Phase C); until then the old shared-key exposure remains for key holders.
+
 ## Operations
 - Daily limits: `AI_DAILY_LIMIT` (default 60) and `CONTENT_DAILY_LIMIT` (300) in `wrangler.toml`.
 - Purchases: `SELECT email, product, status, provider, created_at FROM purchases ORDER BY id DESC LIMIT 50`
