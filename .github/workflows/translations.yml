@@ -1,0 +1,99 @@
+name: Generate translations
+
+# Manual only: fills in missing or stale pre-translations with
+# scripts/generate-translations.js and pushes them to a new branch for review.
+# Groq's free tier is rate-limited, so a full language can take more than one
+# run — each run stops cleanly before the job limit and the next one resumes
+# from the (encrypted) checkpoint cache.
+#
+# Secrets: GROQ_API_KEY (already used by the builds), LICENSE_KEYS_MD (the full
+# contents of LICENSE-KEYS-SECRET.md) and MES_BUNDLE_KEY (for the sync check).
+on:
+  workflow_dispatch:
+    inputs:
+      languages:
+        description: 'Languages (comma list of fr,de,zh,ja,ko,it)'
+        default: 'fr,ja,ko,it'
+        required: true
+      modules:
+        description: 'Module numbers as shown in the app, e.g. 1,2,3 (empty = all)'
+        default: ''
+        required: false
+      model:
+        description: 'Groq model'
+        default: 'openai/gpt-oss-20b'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: translations
+  cancel-in-progress: false
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - run: npm ci
+
+      - name: Restore translation checkpoint
+        uses: actions/cache/restore@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .translation-checkpoint.enc
+          key: translation-checkpoint-${{ github.run_id }}
+          restore-keys: translation-checkpoint-
+
+      - name: Translate
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LICENSE_KEYS_MD: ${{ secrets.LICENSE_KEYS_MD }}
+          TRANSLATE_LANGS: ${{ inputs.languages }}
+          TRANSLATE_MODEL: ${{ inputs.model }}
+          MODULES_INPUT: ${{ inputs.modules }}
+          # Leaves ~25 minutes for the checks, commit and cache save.
+          TIME_BUDGET_MIN: '320'
+        run: |
+          # The app shows modules 1-based; the script takes 0-based indexes.
+          TRANSLATE_MODULES=$(echo "$MODULES_INPUT" | tr ',' '\n' | sed '/^\s*$/d' | awk '{printf "%s%d", (NR>1?",":""), $1-1}')
+          export TRANSLATE_MODULES
+          node scripts/generate-translations.js
+
+      - name: Save translation checkpoint
+        if: always()
+        uses: actions/cache/save@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: .translation-checkpoint.enc
+          key: translation-checkpoint-${{ github.run_id }}
+
+      - name: Rebuild manifest and verify against the English content
+        env:
+          MES_BUNDLE_KEY: ${{ secrets.MES_BUNDLE_KEY }}
+        run: |
+          node scripts/build-translation-manifest.js
+          node scripts/check-translation-sync.js
+
+      - name: Push to a review branch
+        env:
+          LANGS: ${{ inputs.languages }}
+          RUN_NUMBER: ${{ github.run_number }}
+          COMPARE_BASE: ${{ github.server_url }}/${{ github.repository }}/compare/main...
+        run: |
+          if git diff --quiet -- www/assets/translations www/assets/translations-manifest.js; then
+            echo "No translation changes to push." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          BRANCH="translations/run-$RUN_NUMBER"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add www/assets/translations www/assets/translations-manifest.js
+          git commit -m "Add generated translations ($LANGS) from run $RUN_NUMBER"
+          git push origin "$BRANCH"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pushed **$BRANCH** — [open a pull request](${COMPARE_BASE}${BRANCH}?expand=1) so the PR checks run before merging." >> "$GITHUB_STEP_SUMMARY"
