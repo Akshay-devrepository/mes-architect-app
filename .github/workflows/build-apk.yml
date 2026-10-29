@@ -8,6 +8,14 @@ on:
 permissions:
   contents: write
 
+# One build at a time, newest wins. Without this, several quick pushes build
+# in parallel and whichever finishes LAST becomes the "latest" release — an
+# older APK than the version.json that deploy-pages published, so the app's
+# update check offers an update that re-downloads the same old build forever.
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
