@@ -874,9 +874,14 @@ document.addEventListener('keydown', (e) => {
     openSearchPanel();
     return;
   }
-  if (e.target.id === 'ai-input' || e.target.id === 'searchInput') return;
-  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextSection();
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevSection();
+  // Left/Right only: Up/Down belong to page scrolling. Never while typing
+  // in a field, or with a modifier held (browser/OS shortcuts), or while a
+  // focused control (select, slider…) uses arrows itself.
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  const t = e.target;
+  if (t instanceof Element && t.closest('input, textarea, select, [contenteditable="true"], [role="slider"], [role="listbox"]')) return;
+  if (e.key === 'ArrowRight') nextSection();
+  if (e.key === 'ArrowLeft') prevSection();
 });
 
 // ── INIT ──

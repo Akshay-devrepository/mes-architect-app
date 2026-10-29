@@ -10,6 +10,7 @@ const APP_SHELL = [
   './assets/fonts/fonts.css',
   './assets/actions.js',
   './assets/app.js',
+  './assets/a11y.js',
   './assets/sw-register.js',
   './assets/enhance.js',
   './assets/quiz-data.js',

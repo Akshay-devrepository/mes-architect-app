@@ -215,7 +215,7 @@ function addTranslateControlsToModules() {
     const box = document.createElement('div');
     box.className = 'translate-controls';
     box.innerHTML =
-      '<select class="quiz-select translate-lang-select">' +
+      '<select class="quiz-select translate-lang-select" aria-label="Translation language">' +
         '<option value=""' + (deviceDefault ? '' : ' selected') + '>🌐 Choose a language…</option>' +
         TRANSLATE_LANGUAGES.map((lang) =>
           '<option value="' + lang + '"' + (lang === deviceDefault ? ' selected' : '') + '>' + lang + '</option>'
@@ -223,7 +223,7 @@ function addTranslateControlsToModules() {
       '</select>' +
       '<button class="translate-btn">🌐 Translate</button>' +
       '<button class="translate-revert-btn" style="display:none">↺ Show Original</button>' +
-      '<span class="translate-status"></span>';
+      '<span class="translate-status" role="status"></span>';
     header.appendChild(box);
 
     box.querySelector('.translate-btn').addEventListener('click', () => translateModule(idx));
