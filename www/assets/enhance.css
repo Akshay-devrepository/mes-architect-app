@@ -1452,3 +1452,10 @@ body.search-open #searchPanel { opacity: 1; pointer-events: auto; transform: tra
 
 .account-danger { color: var(--red); }
 a.settings-link { display: block; text-decoration: none; }
+/* Tap targets: at least 24×24 px (WCAG 2.2 AA 2.5.8) for the small
+   text-style controls; everything else is already larger. */
+.home-card-buy, .home-stat-link, .text-size-reset, .settings-link, .account-link {
+  min-height: 24px; display: inline-flex; align-items: center;
+}
+a.settings-link, .settings-link { display: flex; min-height: 32px; }
+.translate-controls[hidden] { display: none; }

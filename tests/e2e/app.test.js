@@ -76,10 +76,9 @@ test('text size setting persists across a reload', async () => {
 test('the free module never asks a new user to "re-enter" a license key', async () => {
   const { page, errors, context } = await openApp(env.browser, env.baseUrl);
   await page.click('.nav-item[data-idx="0"]');
-  const select = page.locator('#sec-0 .translate-lang-select');
-  await page.waitForFunction(() => !/Choose a language/.test(document.querySelector('#sec-0 .translate-lang-select').textContent) ||
-    !document.querySelector('#sec-0 .translate-lang-select').disabled);
-  assert.doesNotMatch(await select.textContent(), /re-enter/i);
+  // No translations exist for it yet, so the controls are hidden outright.
+  await page.locator('#sec-0 .translate-controls').waitFor({ state: 'hidden' });
+  assert.doesNotMatch(await page.textContent('#sec-0 .translate-controls'), /re-enter/i);
   assert.deepEqual(errors, []);
   await context.close();
 });
