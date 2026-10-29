@@ -266,6 +266,10 @@ function refreshTranslateLockUI(idx) {
   const blocks = getTranslatableBlocks(section);
   getFullyCoveredLanguages(idx, blocks).then(({ covered: languages, hasUnlockKey }) => {
     const deviceDefault = detectDeviceTranslateDefault();
+    // Nothing translated for this module (e.g. the free Module 1): hide the
+    // controls rather than show a dropdown that can never be used.
+    box.hidden = !languages.length && hasUnlockKey;
+    if (box.hidden) return;
     if (!languages.length) {
       const noKey = !hasUnlockKey;
       select.innerHTML = '<option value="">' +

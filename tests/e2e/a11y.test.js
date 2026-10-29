@@ -83,3 +83,16 @@ test('the sales and privacy pages pass axe WCAG 2.1 AA (serious + critical)', as
   }
   await context.close();
 });
+
+test('controls on a phone are at least 24px tall and wide (WCAG 2.2 target size)', async () => {
+  const { page, context } = await openApp(env.browser, env.baseUrl, { viewport: { width: 412, height: 915 } });
+  const tooSmall = async () => page.evaluate(() =>
+    [...document.querySelectorAll('button, a[href], [role="button"], input, select')]
+      .filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.width < 24 || r.height < 24); })
+      .map((e) => (e.id || e.className || e.tagName) + ' ' + Math.round(e.getBoundingClientRect().width) + 'x' + Math.round(e.getBoundingClientRect().height)));
+  assert.deepEqual(await tooSmall(), [], 'home');
+  await page.click('#settingsToggleBtn');
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+  assert.deepEqual(await tooSmall(), [], 'settings');
+  await context.close();
+});
