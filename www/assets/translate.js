@@ -82,7 +82,9 @@ async function contentHashBrowser(text) {
 // ever, as a separate concern from body content).
 function getTranslatableBlocks(section) {
   const container = section.querySelector('.unlocked-content') || section;
-  return Array.from(container.children).filter((el) => !el.classList.contains('section-header') && !el.classList.contains('licensee-mark'));
+  // .section-pager is app.js's runtime prev/next nav, never authored content.
+  return Array.from(container.children).filter((el) => !el.classList.contains('section-header') &&
+    !el.classList.contains('licensee-mark') && !el.classList.contains('section-pager'));
 }
 
 // enhance.js's injectStars() appends a .star-btn bookmark toggle inside

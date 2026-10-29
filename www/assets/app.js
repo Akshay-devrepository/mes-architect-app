@@ -167,6 +167,7 @@ function showSection(index) {
   if (index === 17 && window.renderSaved) window.renderSaved();
   if (index === 18 && window.renderGlossary) window.renderGlossary();
   if (index === 19 && window.renderProgress) window.renderProgress();
+  renderSectionPager(index);
 
   // On phones/small tablets, picking a topic should close the drawer menu
   if (window.innerWidth <= 900) closeSidebar();
@@ -302,6 +303,39 @@ function buildHomeCards() {
   }
   grid.dataset.built = '1';
   grid.dataset.cacheKey = cacheKey;
+}
+
+// Labelled previous/next links at the end of every section. On phones this
+// replaces the top bar's arrow buttons (hidden there by responsive.css),
+// which were easy to confuse with Back and squeezed the module title.
+function renderSectionPager(index) {
+  const section = document.getElementById('sec-' + index);
+  if (!section) return;
+  let pager = document.getElementById('sectionPager');
+  if (!pager) {
+    pager = document.createElement('nav');
+    pager.id = 'sectionPager';
+    pager.className = 'section-pager';
+    pager.setAttribute('aria-label', 'Module navigation');
+  }
+  pager.replaceChildren();
+  const link = (target, dir) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'section-pager-btn section-pager-' + dir;
+    btn.setAttribute('data-onclick', 'showSection(' + target + ')');
+    const label = document.createElement('span');
+    label.className = 'section-pager-label';
+    label.textContent = dir === 'prev' ? '← Previous' : 'Next →';
+    const title = document.createElement('span');
+    title.className = 'section-pager-title';
+    title.textContent = sectionTitles[target];
+    btn.append(label, title);
+    return btn;
+  };
+  if (index > 0) pager.appendChild(link(index - 1, 'prev'));
+  if (index < totalSections - 1) pager.appendChild(link(index + 1, 'next'));
+  section.appendChild(pager);
 }
 
 function nextSection() {
