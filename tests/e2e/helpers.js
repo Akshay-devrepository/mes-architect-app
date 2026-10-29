@@ -30,8 +30,8 @@ function startServer() {
 
 // Opens a fresh page and records anything that would show up as a red error
 // in DevTools, so every test can assert the app stayed error-free.
-async function openApp(browser, baseUrl, { viewport } = {}) {
-  const context = await browser.newContext(viewport ? { viewport } : {});
+async function openApp(browser, baseUrl, { viewport, contextOptions = {}, beforeLoad } = {}) {
+  const context = await browser.newContext({ ...(viewport ? { viewport } : {}), ...contextOptions });
   // Hermetic: Keygen.sh, Groq, GitHub and fonts are never reached, so a
   // test can't pass or fail on someone else's uptime. Code that calls them
   // must cope with the network being down anyway.
@@ -42,6 +42,7 @@ async function openApp(browser, baseUrl, { viewport } = {}) {
   page.on('console', (m) => {
     if (m.type() === 'error' && !/ERR_BLOCKED_BY_CLIENT/.test(m.text())) errors.push('console: ' + m.text());
   });
+  if (beforeLoad) await beforeLoad(context);
   await page.goto(baseUrl);
   await page.waitForSelector('#homeGrid > *');
   return { context, page, errors };

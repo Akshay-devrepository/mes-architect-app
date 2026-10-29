@@ -29,13 +29,16 @@ function truncate(str, n) {
 }
 
 function makeStarBtn(id, meta) {
-  const btn = document.createElement('div');
+  const btn = document.createElement('button');
+  btn.type = 'button';
   btn.className = 'star-btn';
   btn.dataset.bmId = id;
   btn.innerHTML = '☆';
   btn.title = 'Save for later';
+  btn.setAttribute('aria-label', 'Save for later: ' + meta.title);
+  btn.setAttribute('aria-pressed', 'false');
   const bookmarks = loadBookmarks();
-  if (bookmarks[id]) { btn.classList.add('starred'); btn.innerHTML = '★'; }
+  if (bookmarks[id]) { btn.classList.add('starred'); btn.innerHTML = '★'; btn.setAttribute('aria-pressed', 'true'); }
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleBookmark(id, meta, btn);
@@ -47,10 +50,10 @@ function toggleBookmark(id, meta, btn) {
   const bookmarks = loadBookmarks();
   if (bookmarks[id]) {
     delete bookmarks[id];
-    if (btn) { btn.classList.remove('starred'); btn.innerHTML = '☆'; }
+    if (btn) { btn.classList.remove('starred'); btn.innerHTML = '☆'; btn.setAttribute('aria-pressed', 'false'); }
   } else {
     bookmarks[id] = meta;
-    if (btn) { btn.classList.add('starred'); btn.innerHTML = '★'; }
+    if (btn) { btn.classList.add('starred'); btn.innerHTML = '★'; btn.setAttribute('aria-pressed', 'true'); }
   }
   saveBookmarks(bookmarks);
   updateSavedCount();

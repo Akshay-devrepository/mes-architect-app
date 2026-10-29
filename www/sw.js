@@ -33,6 +33,22 @@ const APP_SHELL = [
   './icons/icon-512.png'
 ];
 
+// Paid-module ciphertext (assets/modules/, ~4.4 MB in total). Kept out of
+// APP_SHELL so it never delays install or first paint; fetched once the
+// worker is active instead, so a license key still unlocks offline later.
+// scripts/__tests__/sw-module-list.test.js keeps this list in sync with the
+// files on disk.
+const MODULE_FILES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+  .map((n) => './assets/modules/sec-' + n + '.json');
+
+function warmModuleCache() {
+  return caches.open(CACHE_NAME).then((cache) =>
+    Promise.all(MODULE_FILES.map((url) =>
+      cache.match(url).then((hit) => hit || cache.add(url)).catch(() => {})
+    ))
+  );
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
@@ -43,7 +59,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    ).then(() => self.clients.claim()).then(warmModuleCache)
   );
 });
 

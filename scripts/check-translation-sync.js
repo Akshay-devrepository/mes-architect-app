@@ -34,6 +34,7 @@ const fs = require('fs');
 const path = require('path');
 const { tryDecrypt } = require('./lib/crypto-utils');
 const { hashBlocksOf } = require('./lib/block-hash');
+const { readModuleCiphertexts } = require('./lib/module-ciphertext');
 
 const ROOT = path.join(__dirname, '..');
 const LANGS = ['fr', 'de', 'zh', 'ja', 'ko', 'it'];
@@ -57,13 +58,8 @@ function main() {
     process.exit(0);
   }
 
-  const indexHtml = fs.readFileSync(path.join(ROOT, 'www', 'index.html'), 'utf8');
-  const gateRe = /<div class="locked-gate" data-module="(\d+)" data-individual='[^']*' data-bundle='([^']*)'>/g;
   const englishHashesByModule = {};
-  let gm;
-  while ((gm = gateRe.exec(indexHtml))) {
-    const idx = gm[1];
-    const bundleEnc = JSON.parse(gm[2]);
+  for (const [idx, { bundle: bundleEnc }] of Object.entries(readModuleCiphertexts())) {
     const plaintext = tryDecrypt(bundleEnc, bundleKey + '::sec-' + idx);
     if (!plaintext) {
       console.error('❌ Could not decrypt sec-' + idx + ' with the bundle key — wrong key, or the ' +

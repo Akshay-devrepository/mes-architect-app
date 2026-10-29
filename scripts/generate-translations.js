@@ -16,6 +16,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { hashBlocksOf } = require('./lib/block-hash');
 const path = require('path');
+const { readModuleCiphertexts } = require('./lib/module-ciphertext');
 
 const ROOT = path.join(__dirname, '..');
 const INDEX_PATH = path.join(ROOT, 'www', 'index.html');
@@ -269,7 +270,7 @@ function saveCheckpoint(cp) {
 }
 
 async function main() {
-  const html = fs.readFileSync(INDEX_PATH, 'utf8');
+  const ciphertexts = readModuleCiphertexts({ indexPath: INDEX_PATH });
   const keys = parseExistingKeys(fs.readFileSync(SECRETS_PATH, 'utf8'));
   const checkpoint = loadCheckpoint(); // { "1:es:0:2": "translatedHtml", ... }  key = module:lang:card:chunkIdx
 
@@ -278,10 +279,8 @@ async function main() {
   // Decrypt each pilot module's English cards once.
   const moduleCards = {}; // idx -> [{ html, hash }]
   for (const idx of PILOT_MODULES) {
-    const gateRe = new RegExp('<div class="locked-gate" data-module="' + idx + '"[^>]*data-individual=\'([^\']+)\'', 's');
-    const m = gateRe.exec(html);
-    if (!m) throw new Error('sec-' + idx + ' gate not found');
-    const individualEnc = JSON.parse(m[1].replace(/&quot;/g, '"'));
+    if (!ciphertexts[idx]) throw new Error('sec-' + idx + ' gate not found');
+    const individualEnc = ciphertexts[idx].individual;
     const plaintext = decrypt(individualEnc, keys.moduleKeys[idx]);
     const cardOpenRe = /<div class="(dd-wrap|q-box)"[^>]*>/g;
     const positions = [];

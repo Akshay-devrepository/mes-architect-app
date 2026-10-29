@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { tryDecrypt } = require('./lib/crypto-utils');
+const { readModuleCiphertexts } = require('./lib/module-ciphertext');
 
 const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'backend', '.content-export');
@@ -33,13 +34,11 @@ function write(rel, data) {
 }
 
 const key = bundleKey();
-const html = fs.readFileSync(path.join(ROOT, 'www', 'index.html'), 'utf8');
-const gateRe = /<div class="locked-gate" data-module="(\d+)" data-individual='[^']*' data-bundle='([^']*)'>/g;
-let modules = 0, gm;
-while ((gm = gateRe.exec(html))) {
-  const plain = tryDecrypt(JSON.parse(gm[2]), key + '::sec-' + gm[1]);
-  if (!plain) { console.error('Could not decrypt sec-' + gm[1] + ' — wrong key?'); process.exit(1); }
-  write('modules/' + gm[1] + '.html', plain);
+let modules = 0;
+for (const [section, { bundle }] of Object.entries(readModuleCiphertexts())) {
+  const plain = tryDecrypt(bundle, key + '::sec-' + section);
+  if (!plain) { console.error('Could not decrypt sec-' + section + ' — wrong key?'); process.exit(1); }
+  write('modules/' + section + '.html', plain);
   modules++;
 }
 
