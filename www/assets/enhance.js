@@ -1012,12 +1012,14 @@ function sendFeedback() {
   const version = window.APP_VERSION_NAME ? 'v' + window.APP_VERSION_NAME : 'unknown';
 
   const subject = '[MES Architect Feedback] ' + type;
-  const body = text +
+  let body = text +
     '\n\n---\n' +
     'Type: ' + type + '\n' +
     'App version: ' + version + '\n' +
     'Platform: ' + platform + '\n' +
     'Current screen: ' + screen;
+  const errors = window.MESDiagnostics ? window.MESDiagnostics.summary(5) : '';
+  if (errors) body += '\nRecent errors on this device:\n' + errors;
 
   window.location.href = 'mailto:' + FEEDBACK_EMAIL +
     '?subject=' + encodeURIComponent(subject) +

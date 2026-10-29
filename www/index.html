@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <!-- CSP: the app may only talk to itself, Groq (AI coach), Keygen (licenses), its own Pages site (update check) and Firebase Auth (accounts); the API origin is added by scripts/set-backend-config.js. No inline script at all: handlers are data-on* attributes run by assets/actions.js against an allowlist; no eval. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.groq.com https://api.keygen.sh https://akshay-devrepository.github.io https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script src="assets/diagnostics.js"></script>
 <script src="assets/actions.js"></script>
 <title>MES Architect — Concept Board & Interview Prep</title>
 <meta name="description" content="Interactive MES/ISA-95/ISA-88 concept board with bookmarks, flashcard quizzes, and an AI doubt-solving coach.">
@@ -1613,7 +1614,7 @@ code {
       <label class="feedback-field-label" for="feedbackText">Details</label>
       <textarea id="feedbackText" class="feedback-textarea" placeholder="What happened, or what would you like to see?" rows="6"></textarea>
       <div id="feedbackError" class="feedback-error" style="display:none">Add a few details before sending.</div>
-      <div class="feedback-context-note">Your app version and current screen are included automatically to help with debugging.</div>
+      <div class="feedback-context-note">Your app version, current screen and any recent error messages from this device are added to the email so you can see them before sending.</div>
     </div>
     <div class="feedback-panel-actions">
       <button id="feedbackCancelBtn" class="feedback-cancel-btn" data-onclick="closeFeedbackModal()">Cancel</button>
@@ -1643,6 +1644,10 @@ code {
       <div class="settings-section">
         <div class="settings-section-label">Feedback</div>
         <div class="settings-link" data-onclick="closeSettingsPanel(); openFeedbackModal();">💬 Feedback / Report an issue</div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-label">Privacy</div>
+        <a class="settings-link" href="privacy.html">🔒 Privacy policy</a>
       </div>
       <div class="settings-section" id="settingsUpdateSection" style="display:none">
         <div class="settings-section-label">App Updates</div>

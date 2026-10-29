@@ -260,6 +260,17 @@ resources/            master icon/splash source images (regenerate with `npx @ca
 LICENSE-KEYS-SECRET.md  the actual keys — gitignored, exists only after you run the script locally
 ```
 
+## Privacy & diagnostics
+
+- `www/privacy.html` (linked from Settings and the sales page) describes exactly
+  what is stored on the device and what each third party receives. **Review it
+  before publishing to the Play Store** — it's written from the code, but it's your
+  legal statement.
+- `www/assets/diagnostics.js` keeps the last 20 uncaught errors on the device (keys
+  and emails scrubbed). They're only ever used by the feedback form, which appends
+  the five most recent to the email the user reviews and sends themselves.
+- Signed-in users can delete their account from the sidebar (see backend/README.md).
+
 ## Quality gates
 
 ```bash

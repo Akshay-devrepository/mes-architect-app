@@ -29,6 +29,10 @@ Everything runs on free tiers (Cloudflare Workers + D1 + R2, Firebase Auth).
 - **AI:** `POST /api/ai/chat` — requires the AI Interview Coach module (or bundle),
   rejects client-supplied system prompts, enforces a daily per-user limit, falls
   through the free Groq model chain, never forwards upstream error details.
+- **Account deletion:** `DELETE /api/account` erases the account's usage counters
+  and writes an `account_deleted` audit row; the app then deletes the Firebase
+  sign-in with the user's own token (Play Store / GDPR erasure). Purchase rows are
+  kept as financial records — they're keyed by email, not by the account.
 
 Product codes use the on-screen module numbers: `bundle`, `module-02` … `module-17`.
 
@@ -147,4 +151,9 @@ forged webhooks, checkout tampering, prompt injection and rate limits.
 ## Operations
 - Daily limits: `AI_DAILY_LIMIT` (default 60) and `CONTENT_DAILY_LIMIT` (300) in `wrangler.toml`.
 - Purchases: `SELECT email, product, status, provider, created_at FROM purchases ORDER BY id DESC LIMIT 50`
-- Logs: `npx wrangler tail`
+- Logs: one JSON line per request (`reqId`, `method`, `path`, `status`, `ms`) plus
+  `unhandled` lines with the stack; never emails, tokens, bodies or query strings.
+  Query them in the dashboard (Workers Logs, enabled by `[observability]` in
+  `wrangler.toml`) or live with `npx wrangler tail --format json`.
+- Every response carries `X-Request-Id`, and error bodies include `requestId` — ask
+  a user for it to find the exact log line.

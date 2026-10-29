@@ -31,7 +31,9 @@
     USER_DISABLED: 'This account has been disabled.',
     TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts — wait a few minutes and try again.',
     WEAK_PASSWORD: 'Password must be at least 6 characters.',
-    MISSING_PASSWORD: 'Enter a password.'
+    MISSING_PASSWORD: 'Enter a password.',
+    CREDENTIAL_TOO_OLD_LOGIN_AGAIN: 'For safety, sign out and back in, then delete the account.',
+    TOKEN_EXPIRED: 'For safety, sign out and back in, then delete the account.'
   };
 
   function loadSession() {
@@ -175,8 +177,8 @@
     const status = el('div', { class: 'global-license-status', id: 'accountStatus', text: state.message || '' });
 
     if (!state.email) {
-      const email = el('input', { type: 'email', id: 'accountEmail', placeholder: 'Email', autocomplete: 'email' });
-      const pass = el('input', { type: 'password', id: 'accountPassword', placeholder: 'Password', autocomplete: 'current-password' });
+      const email = el('input', { type: 'email', id: 'accountEmail', placeholder: 'Email', 'aria-label': 'Email', autocomplete: 'email' });
+      const pass = el('input', { type: 'password', id: 'accountPassword', placeholder: 'Password', 'aria-label': 'Password', autocomplete: 'current-password' });
       const signIn = el('button', { type: 'button', text: 'Sign in' });
       const create = el('button', { type: 'button', class: 'account-secondary', text: 'Create account' });
       const forgot = el('button', { type: 'button', class: 'account-link', text: 'Forgot password?' });
@@ -228,7 +230,23 @@
     }
     const out = el('button', { type: 'button', class: 'account-link', text: 'Sign out' });
     out.addEventListener('click', () => signOut(false));
-    box.append(out, status);
+    const del = el('button', { type: 'button', class: 'account-link account-danger', text: 'Delete account' });
+    del.addEventListener('click', async () => {
+      if (!window.confirm('Delete your account? Your sign-in and usage history are erased and this device is signed out. ' +
+        'Purchase records are kept for tax and refund purposes; buying again with the same email restores access.')) return;
+      status.textContent = 'Deleting…';
+      try { await deleteAccount(); }
+      catch (e) { status.textContent = e.message === 'sign-in-required' ? FRIENDLY.TOKEN_EXPIRED : e.message; }
+    });
+    box.append(out, del, status);
+  }
+
+  // Server-side data first (needs a valid token), then the Firebase
+  // sign-in itself, then this device's copy.
+  async function deleteAccount() {
+    await api('/api/account', { method: 'DELETE' });
+    await authPost('delete', { idToken: await getIdToken(true) });
+    signOut(false);
   }
 
   async function afterSignIn(forceRefresh) {

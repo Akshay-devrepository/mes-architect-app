@@ -75,9 +75,11 @@ test('arrow keys scroll and type instead of hijacking navigation', async () => {
   await context.close();
 });
 
-test('the sales page passes axe WCAG 2.1 AA (serious + critical)', async () => {
+test('the sales and privacy pages pass axe WCAG 2.1 AA (serious + critical)', async () => {
   const { page, context } = await openApp(env.browser, env.baseUrl);
-  await page.goto(env.baseUrl + 'buy.html');
-  assert.deepEqual(await seriousViolations(page), []);
+  for (const file of ['buy.html', 'privacy.html']) {
+    await page.goto(env.baseUrl + file);
+    assert.deepEqual(await seriousViolations(page), [], file);
+  }
   await context.close();
 });

@@ -107,3 +107,25 @@ test('the app shell still loads offline once the service worker has cached it', 
   assert.deepEqual(errors.filter((e) => !/net::ERR_INTERNET_DISCONNECTED|Failed to fetch/.test(e)), []);
   await context.close();
 });
+
+test('uncaught errors are kept for bug reports, with keys and emails scrubbed', async () => {
+  const { page, context } = await openApp(env.browser, env.baseUrl);
+  await page.evaluate(() => {
+    setTimeout(() => { throw new Error('boom MES-M03-abcDEF123 for buyer@example.com'); });
+  });
+  await page.waitForFunction(() => window.MESDiagnostics.recent().length > 0);
+  const summary = await page.evaluate(() => window.MESDiagnostics.summary());
+  assert.match(summary, /boom \[key\] for \[email\]/);
+  assert.doesNotMatch(summary, /abcDEF123|buyer@example\.com/);
+  await context.close();
+});
+
+test('the privacy policy is linked from Settings and opens', async () => {
+  const { page, errors, context } = await openApp(env.browser, env.baseUrl);
+  await page.click('#settingsToggleBtn');
+  await page.click('#settingsPanel a[href="privacy.html"]');
+  await page.waitForURL(/privacy\.html$/);
+  assert.match(await page.textContent('h1'), /Privacy Policy/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
