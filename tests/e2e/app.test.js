@@ -128,3 +128,35 @@ test('the privacy policy is linked from Settings and opens', async () => {
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('phones: no arrow buttons in the top bar; a labelled pager ends each module', async () => {
+  const { page, errors, context } = await openApp(env.browser, env.baseUrl, { viewport: { width: 412, height: 915 } });
+  await page.evaluate(() => window.showSection(2));
+  assert.equal(await page.isVisible('#topbarSectionControls'), false);
+  const pager = page.locator('#sec-2 .section-pager');
+  assert.match(await pager.locator('.section-pager-prev').textContent(), /Previous.*02 — MES Industry Overview/);
+  assert.match(await pager.locator('.section-pager-next').textContent(), /Next.*04 — ISA-88 Batch Control/);
+  await pager.locator('.section-pager-next').click();
+  assert.equal(await page.textContent('#topbarTitle'), '04 — ISA-88 Batch Control');
+  assert.equal(await page.locator('.section-pager').count(), 1, 'one pager, moved with the active section');
+  // The title has room now that the arrows are gone.
+  const clipped = await page.evaluate(() => { const t = document.getElementById('topbarTitle'); return t.scrollWidth > t.clientWidth; });
+  assert.equal(clipped, false, 'module title is not truncated');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
+
+test('desktop keeps PREV/NEXT in the top bar', async () => {
+  const { page, context } = await openApp(env.browser, env.baseUrl, { viewport: { width: 1440, height: 900 } });
+  await page.evaluate(() => window.showSection(2));
+  assert.ok(await page.isVisible('#topbarSectionControls'));
+  await context.close();
+});
+
+test('the pager is never treated as translatable module content', async () => {
+  const { page, context } = await openApp(env.browser, env.baseUrl);
+  await page.evaluate(() => window.showSection(0));
+  const included = await page.evaluate(() => getTranslatableBlocks(document.getElementById('sec-0')).some((b) => b.classList.contains('section-pager')));
+  assert.equal(included, false);
+  await context.close();
+});

@@ -109,7 +109,7 @@ which means it's honest about a real trade-off:
 ### How it works
 
 - **Per-module keys** unlock just that one module.
-- **One bundle key** unlocks all 15 paid modules at once — enter it in the
+- **One bundle key** unlocks all 16 paid modules at once — enter it in the
   sidebar's "🔑 Have a license key?" box and every locked module unlocks
   immediately, no need to visit each one.
 - Unlocking is remembered per device (localStorage), so it only needs to

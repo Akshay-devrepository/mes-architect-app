@@ -350,3 +350,26 @@ img, svg, video, iframe { max-width: 100%; }
 #updateBanner {
   padding-bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
 }
+
+/* ── SECTION PAGER (app.js renderSectionPager) ── */
+.section-pager {
+  display: flex; gap: 12px; justify-content: space-between;
+  margin: 40px 0 96px; /* bottom room so the floating ASK AI button never covers it */
+  padding-top: 20px; border-top: 1px solid var(--border);
+}
+.section-pager-btn {
+  display: flex; flex-direction: column; gap: 4px; flex: 1 1 0; min-width: 0; min-height: 48px;
+  padding: 12px 14px; border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface); color: var(--text); text-align: left; cursor: pointer; font: inherit;
+}
+.section-pager-btn:hover { border-color: var(--amber2); }
+.section-pager-next { text-align: right; margin-left: auto; }
+.section-pager-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--amber); }
+.section-pager-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  /* The pager carries prev/next on phones; the top bar keeps Menu, Back,
+     Home, Search, Settings and gets the room back for the module title. */
+  .topbar-controls { display: none !important; }
+  .topbar-section { max-width: none; }
+}
