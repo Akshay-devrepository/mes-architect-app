@@ -2,6 +2,10 @@ name = "mes-architect-api"
 main = "src/index.js"
 compatibility_date = "2026-10-01"
 
+# Workers Logs: keeps the JSON lines from src/log.js queryable in the dashboard.
+[observability]
+enabled = true
+
 [[d1_databases]]
 binding = "DB"
 database_name = "mes-architect"

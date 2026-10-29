@@ -246,3 +246,54 @@ test('routing: health is public, unknown routes 404 after auth, errors are gener
   assert.equal((await call('GET', '/api/admin')).status, 401);
   assert.equal((await call('GET', '/api/admin', { token: await signer.token() })).status, 404);
 });
+
+// ── Account deletion & observability ──────────────────
+test('account: DELETE /api/account erases usage counters, audits it, and keeps purchase records', async () => {
+  const { env, call } = makeHarness(signer);
+  await grant(env, 'buyer@example.com', 'bundle');
+  const token = await signer.token();
+  await call('GET', '/api/modules/3', { token }); // creates a usage row
+  assert.ok(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM usage WHERE uid = 'user-1'").get().n > 0);
+
+  const res = await call('DELETE', '/api/account', { token });
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).deleted, true);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM usage WHERE uid = 'user-1'").get().n, 0);
+  assert.equal(env.DB.raw.prepare("SELECT COUNT(*) AS n FROM audit_log WHERE event = 'account_deleted' AND subject = 'user-1'").get().n, 1);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM purchases').get().n, 1, 'purchase rows are retained');
+});
+
+test('account: deletion requires a valid token', async () => {
+  const { call } = makeHarness(signer);
+  assert.equal((await call('DELETE', '/api/account')).status, 401);
+});
+
+test('observability: every response carries a request id that error bodies echo', async () => {
+  const { call } = makeHarness(signer);
+  const ok = await call('GET', '/api/health');
+  assert.match(ok.headers.get('X-Request-Id'), /^[\w-]+$/);
+  const denied = await call('GET', '/api/me');
+  const body = await denied.json();
+  assert.equal(body.error, 'missing_token');
+  assert.equal(body.requestId, denied.headers.get('X-Request-Id'));
+});
+
+test('observability: request logs are JSON lines without tokens, emails or query strings', async () => {
+  const { env, call } = makeHarness(signer);
+  await grant(env, 'buyer@example.com', 'bundle');
+  const token = await signer.token();
+  const lines = [];
+  const orig = { log: console.log, warn: console.warn, error: console.error };
+  console.log = console.warn = console.error = (l) => lines.push(String(l));
+  try {
+    await call('GET', '/api/modules/3?email=buyer@example.com', { token });
+    await call('GET', '/api/me', { token: 'garbage' });
+  } finally { Object.assign(console, orig); }
+  assert.ok(lines.length >= 2);
+  for (const line of lines) {
+    const entry = JSON.parse(line);
+    assert.equal(entry.msg, 'request');
+    assert.ok(entry.reqId && entry.status && typeof entry.ms === 'number');
+    assert.doesNotMatch(line, /buyer@example\.com|Bearer|eyJ|\?/);
+  }
+});
