@@ -15,7 +15,6 @@
   const DISMISSED_KEY = 'mes_update_dismissed_version';
   const isNativeBuild = typeof window.APP_VERSION_CODE === 'number' && window.APP_VERSION_CODE > 0;
 
-  let checked = false;
   let checking = false;
 
   function buildBanner(remote) {
@@ -61,7 +60,6 @@
       .then((r) => (r.ok ? r.json() : null))
       .then((remote) => {
         checking = false;
-        checked = true;
         if (!remote || typeof remote.versionCode !== 'number') return;
         if (remote.versionCode <= window.APP_VERSION_CODE) return;
         const dismissed = parseInt(localStorage.getItem(DISMISSED_KEY) || '0', 10);
@@ -87,7 +85,6 @@
     document.getElementById('updateCheckLink').addEventListener('click', () => {
       const status = document.getElementById('updateCheckStatus');
       status.textContent = 'checking…';
-      const before = document.getElementById('updateBanner');
       checkForUpdate();
       setTimeout(() => {
         const after = document.getElementById('updateBanner');

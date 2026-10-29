@@ -81,21 +81,6 @@ function parseExistingKeys(mdText) {
   return result;
 }
 
-function findBalancedDiv(html, openTagRegex, fromIndex) {
-  openTagRegex.lastIndex = fromIndex || 0;
-  const m = openTagRegex.exec(html);
-  if (!m) return null;
-  const innerStart = m.index + m[0].length;
-  const tokenRe = /<div\b[^>]*>|<\/div>/g;
-  tokenRe.lastIndex = innerStart;
-  let depth = 1, tok;
-  while ((tok = tokenRe.exec(html))) {
-    if (tok[0] === '</div>') { depth--; if (depth === 0) return { innerStart, innerEnd: tok.index }; }
-    else depth++;
-  }
-  throw new Error('Unbalanced <div> from index ' + fromIndex);
-}
-
 // ── generic top-level-child splitter (any tag, depth-balanced) ──
 function splitTopLevelElements(inner) {
   const results = [];

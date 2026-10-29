@@ -8,7 +8,10 @@
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
     "cap:build": "cd android && gradlew.bat assembleDebug",
-    "test": "node --disable-warning=ExperimentalWarning --test scripts/__tests__/*.test.js backend/test/*.test.mjs"
+    "test": "node --disable-warning=ExperimentalWarning --test scripts/__tests__/*.test.js backend/test/*.test.mjs",
+    "lint": "eslint .",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.js",
+    "check": "npm run lint && npm test && npm run test:e2e"
   },
   "keywords": [
     "mes",
@@ -21,11 +24,16 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@capacitor/android": "^8.5.3",
     "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
     "http-server": "^14.1.1",
     "jsdom": "^29.1.1",
+    "playwright": "1.63.0",
     "sharp": "^0.35.3"
   },
   "dependencies": {

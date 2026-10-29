@@ -181,7 +181,12 @@ async function tryPretranslatedBlock(idx, blockPosition, blockEl, language) {
 // "re-enter your key" instead of "not available yet".
 async function getFullyCoveredLanguages(idx, blocks) {
   const covered = [];
-  const hasUnlockKey = !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx)) ||
+  // The free trial module has no .locked-gate at all — there's no key to
+  // "re-enter", so it must not be reported as missing one.
+  const section = document.getElementById('sec-' + idx);
+  const isFreeModule = !!section && !section.querySelector('.locked-gate');
+  const hasUnlockKey = isFreeModule ||
+    !!(window.getUnlockKeyForModule && window.getUnlockKeyForModule(idx)) ||
     !!(window.MESAccount && window.MESAccount.ownsSection(idx));
   if (!hasUnlockKey) return { covered, hasUnlockKey };
   const manifest = window.PRETRANSLATED_MANIFEST || {};
