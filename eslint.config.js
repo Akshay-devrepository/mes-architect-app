@@ -31,6 +31,12 @@ module.exports = [
     rules: { 'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none' }] }
   },
   {
+    // Callbacks passed to page.evaluate() run in the app's page, not in Node.
+    files: ['tests/e2e/**/*.js'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+    rules: { 'no-undef': 'off' }
+  },
+  {
     files: ['backend/**/*.{js,mjs}'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.worker, ...globals.node } },
     rules: { 'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none' }] }

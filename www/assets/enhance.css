@@ -1431,3 +1431,18 @@ body.search-open #searchPanel { opacity: 1; pointer-events: auto; transform: tra
   color: var(--text-muted);
   text-align: right;
 }
+
+/* ── Accessibility (see a11y.js) ── */
+.skip-link {
+  position: absolute; left: 8px; top: -48px; z-index: 10000;
+  padding: 10px 16px; border-radius: 6px;
+  background: var(--amber); color: #060b14; font-weight: 700; text-decoration: none;
+}
+.skip-link:focus { top: 8px; }
+#main:focus { outline: none; }
+/* Keyboard focus is always visible; mouse/touch clicks don't get a ring. */
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+[role="button"]:focus-visible { border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
