@@ -81,9 +81,11 @@ below. Go-live runbook: [backend/README.md](backend/README.md).
 
 ## Selling licensed access
 
-Modules 2–16 ship **encrypted** inside `www/index.html` (AES-256-GCM via the
-browser's native Web Crypto API) — only module 1 and the Quiz/Saved tabs are
-plaintext. This is a **client-side-only** scheme with no backend or server,
+Modules 2–17 ship **encrypted** as `www/assets/modules/sec-<n>.json`
+(AES-256-GCM via the browser's native Web Crypto API), fetched only when a
+key is tried on that module, and pre-cached by the service worker in the
+background so unlocking also works offline — only module 1 and the
+Quiz/Saved tabs are plaintext. This is a **client-side-only** scheme with no backend or server,
 which means it's honest about a real trade-off:
 
 - ✅ Locked module content is genuinely absent from the page — view-source
@@ -217,23 +219,27 @@ fingerprinting, which isn't currently wired in.
 ### Rotating or re-generating keys
 
 Re-running `node scripts/encrypt-modules.js` regenerates **every** key from
-scratch (invalidating any already sold) and re-encrypts `www/index.html`.
+scratch (invalidating any already sold) and re-encrypts the modules into
+`www/assets/modules/`.
 After running it:
 
 ```bash
 npx cap sync android   # bake the newly-encrypted content into the Android build too
 ```
 
-Then commit `www/index.html` (safe — only ciphertext) and push as normal.
+Then commit `www/index.html` and `www/assets/modules/` (safe — only
+ciphertext) and push as normal.
 **Never** commit `LICENSE-KEYS-SECRET.md`.
 
 ## Project structure
 
 ```
 www/                 the actual web app (this is what ships)
-  index.html          all 18 modules — content + inline styles/scripts
-                       (modules 2-16's bodies are AES-256-GCM ciphertext post-encryption)
+  index.html          app shell + module 1 and the free tabs (~90 KB); paid
+                       modules are empty .locked-gate placeholders
   assets/
+    modules/           sec-<n>.json — each paid module's AES-256-GCM ciphertext, loaded on demand
+    a11y.js            keyboard + screen-reader layer (focusable controls, dialogs, live regions)
     enhance.css        styles for stars, saved cards, quiz cards, the AI FAB, update banner, lock gate
     enhance.js         bookmark + quiz engine logic (scans the DOM, no build step)
     quiz-data.js       hand-curated bonus quiz cards (calculations, acronyms, scenarios)
@@ -245,11 +251,28 @@ www/                 the actual web app (this is what ships)
   sw.js                 service worker (offline app-shell caching)
   icons/                app icons
 scripts/
-  encrypt-modules.js    build step that locks modules 2-16 behind a license key (see above)
+  encrypt-modules.js    build step that locks modules 2-17 behind a license key (see above)
+  split-module-ciphertext.js  one-time migration of inline ciphertext out of index.html
+  lib/module-ciphertext.js    the one reader every script uses to find module ciphertext
+tests/e2e/             Playwright browser tests: journeys, unlock (fixture keys), axe a11y gate
 android/               Capacitor-generated native Android project
 resources/            master icon/splash source images (regenerate with `npx @capacitor/assets generate` — run on demand, not installed)
 LICENSE-KEYS-SECRET.md  the actual keys — gitignored, exists only after you run the script locally
 ```
+
+## Quality gates
+
+```bash
+npm run lint       # ESLint
+npm test           # unit tests (scripts + backend)
+npm run test:e2e   # browser tests — needs Chromium: npx playwright install chromium
+npm run check      # all three
+```
+
+Pull requests run all of these plus a debug Android build (`.github/workflows/pr-checks.yml`).
+The e2e suite blocks every non-local request, so it never depends on Keygen,
+Groq or GitHub being up, and it unlocks modules with fixture ciphertext and
+throwaway keys, so it needs no secrets.
 
 ## AI chat setup
 

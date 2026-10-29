@@ -232,10 +232,29 @@ function revealModule(gate, plaintext) {
   if (window.refreshTranslateLockUI) window.refreshTranslateLockUI(gate.dataset.module);
 }
 
+// Each locked module's ciphertext lives in assets/modules/sec-<idx>.json
+// (see scripts/split-module-ciphertext.js) instead of inline in index.html,
+// so the ~4.4 MB of it is only downloaded for a module someone actually
+// tries a key on. The service worker pre-caches these files in the
+// background after install, so unlocking still works offline. The path is
+// built from the numeric index only — never from page-supplied text.
+const moduleCiphertextCache = {};
+function loadModuleCiphertext(idx) {
+  const n = parseInt(idx, 10);
+  if (!Number.isInteger(n) || n < 0) return Promise.reject(new Error('bad module index'));
+  if (!moduleCiphertextCache[n]) {
+    moduleCiphertextCache[n] = fetch('assets/modules/sec-' + n + '.json')
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .catch((e) => { delete moduleCiphertextCache[n]; throw e; });
+  }
+  return moduleCiphertextCache[n];
+}
+
+// Resolves to false (key doesn't fit), 'individual' or 'bundle' (which
+// kind of key it was). Rejects only if the ciphertext couldn't be loaded.
 async function attemptUnlockModule(gate, keyInput) {
   const idx = gate.dataset.module;
-  const individual = JSON.parse(gate.dataset.individual);
-  const bundle = JSON.parse(gate.dataset.bundle);
+  const { individual, bundle } = await loadModuleCiphertext(idx);
 
   let plaintext = await tryDecrypt(individual, keyInput);
   let matchedBundle = false;
@@ -261,7 +280,7 @@ async function attemptUnlockModule(gate, keyInput) {
     localStorage.setItem(INDIVIDUAL_KEY_CACHE_KEY, JSON.stringify(individualKeys));
   }
   revealModule(gate, plaintext);
-  return true;
+  return matchedBundle ? 'bundle' : 'individual';
 }
 
 // Account-based unlock (assets/account.js): content comes from the API
@@ -301,9 +320,19 @@ window.getUnlockKeyForModule = getUnlockKeyForModule;
 async function unlockAllWithKey(key) {
   const gates = document.querySelectorAll('.locked-gate:not(.unlocked)');
   for (const gate of gates) {
-    await attemptUnlockModule(gate, key);
+    // A module whose file can't be fetched right now (offline, first visit)
+    // just stays locked; the others still get their chance.
+    await attemptUnlockModule(gate, key).catch(() => false);
   }
   refreshHomeIfActive();
+}
+
+// Individual keys are issued as MES-M<NN>-… (scripts/encrypt-modules.js),
+// so the module they belong to can be tried first without downloading and
+// test-decrypting every other module.
+function moduleIndexHintedByKey(key) {
+  const m = /^MES-M(\d{2})-/.exec(key);
+  return m ? String(parseInt(m[1], 10) - 1) : null;
 }
 window.unlockAllWithKey = unlockAllWithKey;
 
@@ -332,20 +361,27 @@ async function tryUnlockGate(button) {
   button.textContent = 'Checking…';
 
   const resolved = await resolveUnlockKey(rawKey);
-  let ok = false;
-  if (resolved.key) ok = await attemptUnlockModule(gate, resolved.key);
+  let result = false;
+  let loadFailed = false;
+  if (resolved.key) {
+    try { result = await attemptUnlockModule(gate, resolved.key); }
+    catch (e) { loadFailed = true; }
+  }
 
   button.disabled = false;
   button.textContent = originalLabel;
-  if (!ok) {
-    errorEl.textContent = resolved.error || 'That key didn’t unlock this module — check for typos.';
+  if (!result) {
+    errorEl.textContent = loadFailed
+      ? 'Couldn’t load this module — check your connection and try again.'
+      : (resolved.error || 'That key didn’t unlock this module — check for typos.');
     errorEl.style.display = 'block';
     return;
   }
   errorEl.style.display = 'none';
-  // A key that worked here might be a bundle key that also unlocks every
-  // other still-locked module — sweep the rest right away.
-  await unlockAllWithKey(resolved.key);
+  // A bundle key also unlocks every other still-locked module — sweep the
+  // rest right away. An individual key only ever fits its own module.
+  if (result === 'bundle') await unlockAllWithKey(resolved.key);
+  else refreshHomeIfActive();
 }
 window.tryUnlockGate = tryUnlockGate;
 
@@ -366,7 +402,11 @@ async function tryGlobalUnlock() {
   }
 
   const before = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
-  await unlockAllWithKey(resolved.key);
+  const hinted = moduleIndexHintedByKey(resolved.key);
+  const hintedGate = hinted && document.querySelector('.locked-gate:not(.unlocked)[data-module="' + hinted + '"]');
+  const hintedResult = hintedGate ? await attemptUnlockModule(hintedGate, resolved.key).catch(() => false) : false;
+  if (hintedResult === 'individual') refreshHomeIfActive();
+  else await unlockAllWithKey(resolved.key);
   const after = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
   const unlockedCount = before - after;
   if (unlockedCount > 0) {

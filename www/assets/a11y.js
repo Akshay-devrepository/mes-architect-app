@@ -19,11 +19,28 @@
 
   // ── Clickable non-buttons ──
   function enhanceClickable(el) {
-    if (el.matches(NATIVE) || el.hasAttribute('role')) return;
+    if (el.matches(NATIVE) || el.hasAttribute('role') || el.hasAttribute('data-a11y-proxied')) return;
     // Backdrops are mouse/touch conveniences; Escape covers keyboard users.
     if (/Backdrop$/.test(el.id)) { el.setAttribute('aria-hidden', 'true'); return; }
     el.setAttribute('role', 'button');
     if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    demoteIfNested(el);
+  }
+
+  // A button can't contain another control (a card header holding its ★
+  // bookmark button, say). In that case the header's text child becomes
+  // the keyboard target instead: its click still bubbles up to the
+  // header's data-onclick, so behaviour is identical.
+  const INTERACTIVE = NATIVE + ',[role="button"]';
+  function demoteIfNested(container) {
+    if (container.getAttribute('role') !== 'button' || !container.querySelector(INTERACTIVE)) return;
+    container.removeAttribute('role');
+    container.removeAttribute('tabindex');
+    container.setAttribute('data-a11y-proxied', '');
+    const plain = Array.from(container.children)
+      .filter((c) => !c.matches(INTERACTIVE) && !c.querySelector(INTERACTIVE) && c.textContent.trim());
+    const proxy = plain.find((c) => /title/.test(c.className)) || plain[0];
+    if (proxy) { proxy.setAttribute('role', 'button'); proxy.setAttribute('tabindex', '0'); }
   }
   // Status lines that change after an action (unlock result, translate
   // progress) are announced instead of silently updating.
@@ -32,6 +49,10 @@
     if (!(root instanceof Element)) return;
     if (root.hasAttribute('data-onclick')) enhanceClickable(root);
     root.querySelectorAll('[data-onclick]').forEach(enhanceClickable);
+    // A control added inside an already-enhanced container (stars are
+    // injected after the content is revealed).
+    const host = root.parentElement && root.parentElement.closest('[data-onclick][role="button"]');
+    if (host && root.matches(INTERACTIVE)) demoteIfNested(host);
     Object.entries(LIVE).forEach(([sel, role]) => {
       if (root.matches(sel) && !root.hasAttribute('role')) root.setAttribute('role', role);
       root.querySelectorAll(sel).forEach((n) => { if (!n.hasAttribute('role')) n.setAttribute('role', role); });

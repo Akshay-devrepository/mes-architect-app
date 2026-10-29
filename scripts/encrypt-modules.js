@@ -12,8 +12,9 @@
 // Run with: node scripts/encrypt-modules.js
 //
 // Outputs:
-//   - www/index.html is rewritten in place (safe to commit — only
-//     ciphertext goes in, never a plaintext key).
+//   - www/index.html is rewritten in place with an empty .locked-gate per
+//     module, and www/assets/modules/sec-<idx>.json gets that module's
+//     ciphertext (all safe to commit — never a plaintext key).
 //   - LICENSE-KEYS-SECRET.md is written at the repo root — the ONLY copy of
 //     the actual keys. It is gitignored. NEVER commit it, paste it into a
 //     public issue, or send it anywhere but directly to yourself.
@@ -29,6 +30,7 @@
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
+const { moduleFile, MODULES_DIR } = require('./lib/module-ciphertext');
 
 const ROOT = path.join(__dirname, '..');
 const INDEX_PATH = path.join(ROOT, 'www', 'index.html');
@@ -170,9 +172,7 @@ function main() {
 
     const gate =
       headerHtml +
-      '<div class="locked-gate" data-module="' + idx + '" ' +
-      'data-individual=\'' + JSON.stringify(individualEnc) + '\' ' +
-      'data-bundle=\'' + JSON.stringify(bundleEnc) + '\'>' +
+      '<div class="locked-gate" data-module="' + idx + '">' +
         '<div class="locked-icon">🔒</div>' +
         '<div class="locked-title">This module is part of the paid content</div>' +
         '<div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div>' +
@@ -185,6 +185,9 @@ function main() {
       '<div class="unlocked-content" style="display:none"></div>';
 
     html = html.slice(0, section.innerStart) + gate + html.slice(section.innerEnd);
+    // Ciphertext ships beside the page, fetched on demand by license.js.
+    fs.mkdirSync(MODULES_DIR, { recursive: true });
+    fs.writeFileSync(moduleFile(idx), JSON.stringify({ individual: individualEnc, bundle: bundleEnc }) + '\n', 'utf8');
 
     secretLines.push('**Module ' + (idx + 1) + ' — ' + MODULE_NAMES[idx] + '**  ');
     secretLines.push('`' + individualKey + '`');
