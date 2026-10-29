@@ -32,6 +32,33 @@ gh secret set MES_BUNDLE_KEY
 `LICENSE-KEYS-SECRET.md`, now also held by GitHub Actions' encrypted
 secret store, the same trust boundary `GROQ_API_KEY` already lives in).
 
+## Generating missing translations (Actions → Generate translations)
+
+`scripts/generate-translations.js` fills in only what's missing or stale:
+blocks that already have a matching translation are kept, other modules and
+languages in a file are never touched, and a module is written only once all
+of its blocks are translated (the app offers a language only at full coverage).
+
+1. Add one more secret, the **whole** `LICENSE-KEYS-SECRET.md` (individual
+   keys are needed so translations also unlock for single-module buyers):
+
+   ```bash
+   gh secret set LICENSE_KEYS_MD < LICENSE-KEYS-SECRET.md
+   ```
+
+2. Run **Actions → Generate translations → Run workflow** with the languages
+   (default `fr,ja,ko,it`, the ones currently incomplete) and optionally the
+   module numbers as shown in the app.
+3. Groq's free tier is rate-limited, so one run may not finish everything. It
+   stops cleanly after ~5h20m, pushes what's done, and the next run resumes
+   from an encrypted checkpoint. The run summary says which modules are done.
+4. Each run pushes a `translations/run-N` branch; open a PR from the link in
+   the run summary so the normal PR checks (including the sync check) run.
+
+Locally: `GROQ_API_KEY=gsk_... node scripts/generate-translations.js` with
+`LICENSE-KEYS-SECRET.md` in the repo root (`TRANSLATE_LANGS`,
+`TRANSLATE_MODULES` (0-based), `TRANSLATE_MODEL`, `TIME_BUDGET_MIN` optional).
+
 | Version | Feature added                          |
 |---------|-----------------------------------------|
 | 1.0.24  | Progress Dashboard                      |

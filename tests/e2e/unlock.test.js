@@ -150,3 +150,37 @@ test('unlocked module content passes axe WCAG 2.1 AA (serious + critical)', asyn
   assert.deepEqual(bad, []);
   await context.close();
 });
+
+test('translations made by generate-translations.js are offered and applied by the app', async () => {
+  // Run the real generator on module 4's fixture with the same test keys.
+  const fs = require('fs'); const os = require('os'); const path = require('path');
+  const { run } = require('../../scripts/generate-translations');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'tr-e2e-'));
+  fs.mkdirSync(path.join(root, 'www', 'assets', 'modules'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'www', 'index.html'), '<div class="locked-gate" data-module="3"></div>');
+  fs.writeFileSync(path.join(root, 'www', 'assets', 'modules', 'sec-3.json'), fixtures[3]);
+  const keysMd = '## Bundle key\n\n`' + BUNDLE_KEY + '`\n\n**Module 4 — ISA-88 Batch Control**  \n`' + individualKey(3) + '`\n';
+  const fake = async (html, language) => html.replace(/>([^<]+)</g, (m, t) => '>' + (t.trim() ? language + ': ' + t : t) + '<');
+  const result = await run({ rootDir: root, langs: ['fr'], modules: [3], keysMd, translate: fake, log: () => {} });
+  assert.ok(result.complete);
+  const frJs = fs.readFileSync(path.join(root, 'www', 'assets', 'translations', 'fr.js'), 'utf8');
+  const table = JSON.parse(/=\s*(\{[\s\S]*\});\s*$/.exec(frJs)[1]);
+  const manifestJs = 'window.PRETRANSLATED_MANIFEST = ' + JSON.stringify({ fr: { 3: table['3'].map((e) => e.hash) } }) + ';\n';
+
+  const { page, errors, context } = await openWithFixtures();
+  await context.route(/\/assets\/translations-manifest\.js$/, (r) => r.fulfill({ contentType: 'text/javascript', body: manifestJs }));
+  await context.route(/\/assets\/translations\/fr\.js$/, (r) => r.fulfill({ contentType: 'text/javascript', body: frJs }));
+  await page.reload();
+  await page.waitForSelector('#homeGrid > *');
+  await page.fill('#globalLicenseInput', individualKey(3));
+  await page.click('#globalLicenseRow button:has-text("Apply")');
+  await page.evaluate(() => window.showSection(3));
+  const select = page.locator('#sec-3 .translate-lang-select');
+  await page.waitForFunction(() => [...document.querySelectorAll('#sec-3 .translate-lang-select option')].some((o) => o.value === 'French'));
+  await select.selectOption('French');
+  await page.click('#sec-3 .translate-btn');
+  await page.locator('#sec-3 .dd-title', { hasText: 'French: Fixture concept 3' }).waitFor();
+  assert.match(await page.textContent('#sec-3 .translate-status'), /Translated all/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

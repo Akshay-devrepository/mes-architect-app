@@ -7,6 +7,7 @@ LICENSE-KEYS-SECRET.md
 # chunk text keyed by position, nothing sensitive, but it's a working
 # cache, not a source artifact.
 .translation-checkpoint.json
+.translation-checkpoint.enc
 
 node_modules/
 android/app/build/
