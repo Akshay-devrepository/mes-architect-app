@@ -1,0 +1,1139 @@
+// ══════════════════════════════════════════
+// ENHANCE.JS — bookmarks/star, Saved section, Quiz Mode
+// Works purely by scanning the existing DOM (.dd-wrap concept
+// cards and .q-box question cards) so it stays in sync with the
+// content automatically — no manual indexing needed.
+// ══════════════════════════════════════════
+
+const BOOKMARK_KEY = 'mes_bookmarks_v1';
+const QUIZ_MASTERED_KEY = 'mes_quiz_mastered_v1';
+
+function loadBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BOOKMARK_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveBookmarks(map) {
+  localStorage.setItem(BOOKMARK_KEY, JSON.stringify(map));
+}
+
+function sectionIndexOf(el) {
+  const sec = el.closest('.section');
+  if (!sec) return null;
+  const m = /sec-(\d+)/.exec(sec.id);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function truncate(str, n) {
+  str = (str || '').replace(/\s+/g, ' ').trim();
+  return str.length > n ? str.slice(0, n).trim() + '…' : str;
+}
+
+function makeStarBtn(id, meta) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'star-btn';
+  btn.dataset.bmId = id;
+  btn.innerHTML = '☆';
+  btn.title = 'Save for later';
+  btn.setAttribute('aria-label', 'Save for later: ' + meta.title);
+  btn.setAttribute('aria-pressed', 'false');
+  const bookmarks = loadBookmarks();
+  if (bookmarks[id]) { btn.classList.add('starred'); btn.innerHTML = '★'; btn.setAttribute('aria-pressed', 'true'); }
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleBookmark(id, meta, btn);
+  });
+  return btn;
+}
+
+function toggleBookmark(id, meta, btn) {
+  const bookmarks = loadBookmarks();
+  if (bookmarks[id]) {
+    delete bookmarks[id];
+    if (btn) { btn.classList.remove('starred'); btn.innerHTML = '☆'; btn.setAttribute('aria-pressed', 'false'); }
+  } else {
+    bookmarks[id] = meta;
+    if (btn) { btn.classList.add('starred'); btn.innerHTML = '★'; btn.setAttribute('aria-pressed', 'true'); }
+  }
+  saveBookmarks(bookmarks);
+  updateSavedCount();
+  if (document.getElementById('sec-17') && document.getElementById('sec-17').classList.contains('active')) {
+    renderSaved();
+  }
+}
+
+function updateSavedCount() {
+  const count = Object.keys(loadBookmarks()).length;
+  const dot = document.getElementById('savedCountDot');
+  if (dot) dot.textContent = count > 0 ? String(count) : '';
+}
+
+// ── Inject stars on every concept card and question card ──
+// Safe to call more than once (e.g. after a locked module is unlocked and
+// its cards appear in the DOM for the first time): already-starred elements
+// are skipped, and ids are scoped per-section + a within-section counter
+// rather than a single global counter, so a module unlocked out of order
+// can never end up reusing an id an earlier module's card already has.
+function injectStars() {
+  const ddCounters = {};
+  document.querySelectorAll('.dd-wrap').forEach((wrap) => {
+    const header = wrap.querySelector('.dd-header');
+    if (!header || header.querySelector('.star-btn')) return;
+    const sec = sectionIndexOf(wrap);
+    const secKey = sec === null ? 'x' : sec;
+    ddCounters[secKey] = (ddCounters[secKey] || 0) + 1;
+    const id = 'dd-' + secKey + '-' + ddCounters[secKey];
+    const title = wrap.querySelector('.dd-title');
+    const label = wrap.querySelector('.dd-label');
+    const summary = wrap.querySelector('.dd-summary-text');
+    const meta = {
+      type: 'concept',
+      section: sec,
+      title: title ? title.textContent.trim() : ('Concept ' + id),
+      label: label ? label.textContent.trim() : '',
+      snippet: truncate(summary ? summary.textContent : '', 140)
+    };
+    header.appendChild(makeStarBtn(id, meta));
+  });
+
+  const qaCounters = {};
+  document.querySelectorAll('.q-box').forEach((box) => {
+    if (box.querySelector('.star-btn')) return;
+    const sec = sectionIndexOf(box);
+    const secKey = sec === null ? 'x' : sec;
+    qaCounters[secKey] = (qaCounters[secKey] || 0) + 1;
+    const id = 'qa-' + secKey + '-' + qaCounters[secKey];
+    const qText = box.querySelector('.q-text');
+    const label = box.querySelector('.q-label');
+    const aText = box.querySelector('.a-text');
+    const meta = {
+      type: 'question',
+      section: sec,
+      title: qText ? qText.textContent.trim() : ('Question ' + id),
+      label: label ? label.textContent.trim() : '',
+      snippet: truncate(aText ? htmlToPlainText(aText.innerHTML) : '', 140)
+    };
+    box.appendChild(makeStarBtn(id, meta));
+  });
+
+  updateSavedCount();
+}
+
+// ── Saved section ──
+function renderSaved() {
+  const root = document.getElementById('saved-root');
+  if (!root) return;
+  const bookmarks = loadBookmarks();
+  const ids = Object.keys(bookmarks);
+
+  if (ids.length === 0) {
+    root.innerHTML = '<div class="saved-empty">Nothing saved yet. Click the ☆ on any concept card or question across the board to bookmark it here.</div>';
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'saved-grid';
+  ids.forEach((id) => {
+    const meta = bookmarks[id];
+    const card = document.createElement('div');
+    card.className = 'saved-card';
+    card.innerHTML =
+      '<span class="saved-card-remove" data-remove="' + id + '">✕ remove</span>' +
+      '<div class="saved-card-type">' + (meta.type === 'concept' ? '◈ concept' : '? question') +
+        (meta.section !== null ? ' · module ' + (meta.section + 1) : '') + '</div>' +
+      '<div class="saved-card-title">' + escapeHtml(meta.title) + '</div>' +
+      '<div class="saved-card-snip">' + escapeHtml(meta.snippet) + '</div>';
+
+    card.addEventListener('click', (e) => {
+      if (e.target.dataset.remove) return;
+      if (meta.section !== null && typeof showSection === 'function') showSection(meta.section);
+      setTimeout(() => {
+        const target = document.querySelector('[data-bm-id="' + id + '"]');
+        if (target) {
+          const container = target.closest('.dd-wrap, .q-box');
+          if (container) {
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            container.style.transition = 'box-shadow 0.3s';
+            container.style.boxShadow = '0 0 0 2px var(--amber)';
+            setTimeout(() => { container.style.boxShadow = ''; }, 1400);
+          }
+        }
+      }, 80);
+    });
+    grid.appendChild(card);
+  });
+
+  root.innerHTML = '';
+  root.appendChild(grid);
+
+  root.querySelectorAll('[data-remove]').forEach((el) => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = el.dataset.remove;
+      const btn = document.querySelector('.star-btn[data-bm-id="' + id + '"]');
+      toggleBookmark(id, bookmarks[id], btn);
+      renderSaved();
+    });
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+// ══════════════════════════════════════════
+// QUIZ MODE — spaced repetition (simplified SM-2, the same idea Anki is
+// built on). Each card tracks its own interval/ease/due-date instead of a
+// single mastered/not-mastered flag, so cards you know well resurface
+// after weeks, cards you miss resurface tomorrow, and "due today" is an
+// actual queue rather than "everything not yet mastered."
+// ══════════════════════════════════════════
+let quizDeck = null;      // full deck, built once
+let quizQueue = [];        // ids remaining this session
+let quizIndex = 0;
+let quizFlipped = false;
+let quizFilter = 'due';    // 'due' | 'all'
+let quizMode = 'practice'; // 'practice' | 'mock' — which Quiz Mode tab is showing
+let practiceStarted = false; // mirrors the old root.dataset.started auto-start-once flag
+
+const QUIZ_SCHEDULE_KEY = 'mes_quiz_schedule_v2';
+const SM2_DEFAULT_EASE = 2.5;
+const SM2_MIN_EASE = 1.3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function loadSchedule() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(QUIZ_SCHEDULE_KEY));
+    if (raw) return raw;
+  } catch (e) { /* fall through to migration/empty */ }
+
+  // One-time migration from the old binary mastered/not-mastered set, so
+  // upgrading doesn't throw away existing progress: a previously-mastered
+  // card starts with a short established interval instead of "new."
+  const migrated = {};
+  try {
+    const old = JSON.parse(localStorage.getItem(QUIZ_MASTERED_KEY));
+    if (Array.isArray(old)) {
+      old.forEach((id) => {
+        migrated[id] = { interval: 6, ease: SM2_DEFAULT_EASE, reps: 2, due: Date.now() };
+      });
+      localStorage.removeItem(QUIZ_MASTERED_KEY);
+    }
+  } catch (e) { /* no old data — fresh start */ }
+  saveSchedule(migrated);
+  return migrated;
+}
+function saveSchedule(schedule) {
+  localStorage.setItem(QUIZ_SCHEDULE_KEY, JSON.stringify(schedule));
+}
+
+// quality: 4 = "Got it", 2 = "Still fuzzy" (simplified from SM-2's 0-5 scale
+// down to the two ratings the UI actually offers).
+function scheduleCard(schedule, id, quality) {
+  const card = schedule[id] || { interval: 0, ease: SM2_DEFAULT_EASE, reps: 0, due: 0 };
+  if (quality < 3) {
+    card.reps = 0;
+    card.interval = 1;
+  } else {
+    card.reps += 1;
+    if (card.reps === 1) card.interval = 1;
+    else if (card.reps === 2) card.interval = 6;
+    else card.interval = Math.round(card.interval * card.ease);
+  }
+  card.ease = Math.max(SM2_MIN_EASE, card.ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+  card.due = Date.now() + card.interval * DAY_MS;
+  schedule[id] = card;
+  return card;
+}
+
+function isDue(schedule, id) {
+  const card = schedule[id];
+  return !card || card.due <= Date.now();
+}
+
+function nextDueInWords(schedule, deck) {
+  const future = deck
+    .map((c) => schedule[c.id])
+    .filter((c) => c && c.due > Date.now())
+    .sort((a, b) => a.due - b.due);
+  if (!future.length) return null;
+  const days = Math.ceil((future[0].due - Date.now()) / DAY_MS);
+  return days <= 1 ? 'tomorrow' : 'in ' + days + ' days';
+}
+
+// Answers are structured HTML (<p>/<ul>/<li>/<strong>) so they read well
+// in the module itself, but .a-text starts as display:none until the user
+// clicks "Show Answer" — .innerText (which would otherwise add sensible
+// line breaks between block elements) returns empty for hidden elements,
+// so plain .textContent is the only DOM API that reliably works here
+// regardless of toggle state. It just concatenates text nodes with no
+// separator, which runs list items and paragraphs together with no space
+// ("...missed step)OOS (Out of Specification)...") — inserting a space
+// after each block tag's closing tag before stripping markup fixes that
+// for the plain-text flip-card view without touching the rendered HTML.
+// Walks an inert <template> (no script runs, nothing loads) rather than
+// regex-stripping tags, so entities decode properly ("F&amp;B" -> "F&B")
+// instead of showing up literally on the card.
+const PLAIN_BLOCK_TAGS = /^(P|DIV|H[1-6])$/;
+function htmlToPlainText(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  let out = '';
+  (function walk(node) {
+    node.childNodes.forEach((n) => {
+      if (n.nodeType === Node.TEXT_NODE) { out += n.nodeValue; return; }
+      if (n.nodeType !== Node.ELEMENT_NODE) return;
+      if (n.tagName === 'LI') out += '• ';
+      walk(n);
+      if (PLAIN_BLOCK_TAGS.test(n.tagName)) out += '\n\n';
+      else if (n.tagName === 'LI') out += '\n';
+    });
+  })(tpl.content);
+  return out
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function buildQuizDeck() {
+  if (quizDeck) return quizDeck;
+  const deck = [];
+
+  document.querySelectorAll('.q-box').forEach((box, i) => {
+    const qText = box.querySelector('.q-text');
+    const aText = box.querySelector('.a-text');
+    const label = box.querySelector('.q-label');
+    if (!qText || !aText) return;
+    deck.push({
+      id: 'qa-' + i,
+      // Recorded alongside the id (not encoded inside it) so the Progress
+      // Dashboard can attribute a card to its module without needing to
+      // change the id format itself — the id is what spaced-repetition
+      // schedule data is keyed by, so changing its shape would silently
+      // orphan everyone's existing review history.
+      section: sectionIndexOf(box),
+      tag: label ? label.textContent.replace(/^\/\/\s*/, '').trim() : 'Concept Board',
+      q: qText.textContent.trim(),
+      a: htmlToPlainText(aText.innerHTML)
+    });
+  });
+
+  (window.QUIZ_DATA_EXTRA || []).forEach((item, i) => {
+    deck.push({ id: 'extra-' + i, section: null, tag: item.tag, q: item.q, a: item.a });
+  });
+
+  quizDeck = deck;
+  return deck;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startQuizQueue() {
+  const deck = buildQuizDeck();
+  const schedule = loadSchedule();
+  const pool = quizFilter === 'due' ? deck.filter((c) => isDue(schedule, c.id)) : deck;
+  quizQueue = shuffle(pool).map((c) => c.id);
+  quizIndex = 0;
+  quizFlipped = false;
+}
+
+function renderQuiz() {
+  const root = document.getElementById('quiz-root');
+  if (!root) return;
+
+  root.innerHTML =
+    '<div class="quiz-mode-tabs">' +
+      '<button class="quiz-mode-tab' + (quizMode === 'practice' ? ' active' : '') + '" id="quizModePracticeBtn">🔁 Practice</button>' +
+      '<button class="quiz-mode-tab' + (quizMode === 'mock' ? ' active' : '') + '" id="quizModeMockBtn">🎤 Mock Interview</button>' +
+    '</div>' +
+    '<div id="quiz-mode-body"></div>';
+
+  document.getElementById('quizModePracticeBtn').addEventListener('click', () => { quizMode = 'practice'; renderQuiz(); });
+  document.getElementById('quizModeMockBtn').addEventListener('click', () => { quizMode = 'mock'; renderQuiz(); });
+
+  const body = document.getElementById('quiz-mode-body');
+  if (quizMode === 'practice') renderPracticeQuiz(body);
+  else renderMockInterview(body);
+}
+
+function renderPracticeQuiz(root) {
+  const deck = buildQuizDeck();
+
+  if (!practiceStarted) {
+    startQuizQueue();
+    practiceStarted = true;
+  }
+
+  const schedule = loadSchedule();
+  const dueCount = deck.filter((c) => isDue(schedule, c.id)).length;
+  const learned = deck.filter((c) => schedule[c.id] && schedule[c.id].reps > 0).length;
+  const totalInPool = quizFilter === 'due' ? dueCount : deck.length;
+
+  let html = '';
+  html += '<div class="quiz-toolbar">';
+  html += '<span class="quiz-stat">Deck: <b>' + deck.length + '</b> cards</span>';
+  html += '<span class="quiz-stat">Due today: <b>' + dueCount + '</b></span>';
+  html += '<span class="quiz-stat">Learned: <b>' + learned + '</b> / ' + deck.length + '</span>';
+  html += '<select class="quiz-select" id="quizFilterSelect">' +
+            '<option value="due"' + (quizFilter === 'due' ? ' selected' : '') + '>Due for review</option>' +
+            '<option value="all"' + (quizFilter === 'all' ? ' selected' : '') + '>All cards</option>' +
+          '</select>';
+  html += '<button class="btn-sm" id="quizShuffleBtn">🔀 Shuffle / Restart</button>';
+  html += '</div>';
+
+  if (quizQueue.length === 0) {
+    const nextDue = nextDueInWords(schedule, deck);
+    const doneTitle = quizFilter === 'due'
+      ? (nextDue ? 'All caught up 🎉' : 'Nothing to review yet')
+      : 'Deck cleared for this session';
+    const doneSub = quizFilter === 'due' && nextDue
+      ? 'Next card due ' + nextDue + '. Switch to "All cards" to review early anyway.'
+      : learned + ' of ' + deck.length + ' cards learned so far.';
+    html += '<div class="quiz-done">' +
+      '<div class="quiz-done-title">' + doneTitle + '</div>' +
+      '<div class="quiz-done-sub">' + doneSub + '</div>' +
+      '<button class="quiz-restart-btn" id="quizRestartBtn">Start Again</button>' +
+      '</div>';
+    root.innerHTML = html;
+    document.getElementById('quizShuffleBtn').addEventListener('click', () => { startQuizQueue(); renderQuiz(); });
+    document.getElementById('quizFilterSelect').addEventListener('change', (e) => { quizFilter = e.target.value; startQuizQueue(); renderQuiz(); });
+    document.getElementById('quizRestartBtn').addEventListener('click', () => { startQuizQueue(); renderQuiz(); });
+    return;
+  }
+
+  const progressPct = Math.round(((totalInPool - quizQueue.length) / Math.max(totalInPool, 1)) * 100);
+  const card = deck.find(c => c.id === quizQueue[quizIndex]);
+
+  html += '<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:' + progressPct + '%"></div></div>';
+  html += '<div class="quiz-stage">';
+  html += '<div class="flip-card' + (quizFlipped ? ' flipped' : '') + '" id="quizFlipCard">';
+  html += '<div class="flip-card-inner">';
+  html += '<div class="flip-face front"><div class="flip-face-label">// ' + escapeHtml(card.tag) + ' — Question ' + (quizIndex + 1) + '/' + quizQueue.length + '</div><div class="flip-face-text">' + escapeHtml(card.q) + '</div></div>';
+  html += '<div class="flip-face back"><div class="flip-face-label">// Answer</div><div class="flip-face-text">' + escapeHtml(card.a) + '</div></div>';
+  html += '</div></div>';
+  html += '<div class="flip-hint">' + (quizFlipped ? 'Rate yourself below' : 'Tap the card to reveal the answer') + '</div>';
+
+  if (quizFlipped) {
+    html += '<div class="quiz-rate-row">' +
+      '<button class="quiz-rate-btn again" id="quizAgainBtn">😕 Still fuzzy — review again</button>' +
+      '<button class="quiz-rate-btn good" id="quizGoodBtn">✅ Got it — see you in a few days</button>' +
+      '</div>';
+  }
+  html += '</div>';
+
+  root.innerHTML = html;
+
+  document.getElementById('quizShuffleBtn').addEventListener('click', () => { startQuizQueue(); renderQuiz(); });
+  document.getElementById('quizFilterSelect').addEventListener('change', (e) => { quizFilter = e.target.value; startQuizQueue(); renderQuiz(); });
+  document.getElementById('quizFlipCard').addEventListener('click', () => { quizFlipped = !quizFlipped; renderQuiz(); });
+
+  if (quizFlipped) {
+    document.getElementById('quizAgainBtn').addEventListener('click', () => {
+      const id = quizQueue.splice(quizIndex, 1)[0];
+      quizQueue.push(id); // resurface later in this same session too
+      const s = loadSchedule(); scheduleCard(s, id, 2); saveSchedule(s);
+      if (quizIndex >= quizQueue.length) quizIndex = 0;
+      quizFlipped = false;
+      renderQuiz();
+    });
+    document.getElementById('quizGoodBtn').addEventListener('click', () => {
+      const id = quizQueue.splice(quizIndex, 1)[0];
+      const s = loadSchedule(); scheduleCard(s, id, 4); saveSchedule(s);
+      if (quizIndex >= quizQueue.length) quizIndex = 0;
+      quizFlipped = false;
+      renderQuiz();
+    });
+  }
+}
+
+// ══════════════════════════════════════════
+// MOCK INTERVIEW MODE — a timed, one-question-at-a-time session pulled from
+// the same quiz deck, grouped by tag ("track") rather than by module, since
+// nearly all quizzable cards live under Module 16's own sub-tags (RECRUITER,
+// HIRING MANAGER, TECHNICAL PANEL, OEE DRILL, etc.) rather than spread across
+// modules. Ratings feed the same SM-2 schedule as Practice mode, so a mock
+// session strengthens the one shared memory model instead of forking a
+// second tracking system.
+// ══════════════════════════════════════════
+let mockConfig = null;   // { track, length } once a session has started
+let mockQueue = [];
+let mockIndex = 0;
+let mockRevealed = false;
+let mockResults = [];    // { id, rating: 'strong' | 'partial' | 'blank' }
+
+function availableTracks() {
+  const deck = buildQuizDeck();
+  return Array.from(new Set(deck.map((c) => c.tag))).sort();
+}
+
+function trackPoolSize(track) {
+  const deck = buildQuizDeck();
+  return track === 'all' ? deck.length : deck.filter((c) => c.tag === track).length;
+}
+
+function startMockSession(track, length) {
+  const deck = buildQuizDeck();
+  const pool = track === 'all' ? deck : deck.filter((c) => c.tag === track);
+  mockConfig = { track, length: Math.min(length, pool.length) };
+  mockQueue = shuffle(pool).slice(0, mockConfig.length).map((c) => c.id);
+  mockIndex = 0;
+  mockRevealed = false;
+  mockResults = [];
+}
+
+function renderMockInterview(container) {
+  if (!mockConfig) { renderMockSetup(container); return; }
+  if (mockIndex >= mockQueue.length) { renderMockResults(container); return; }
+  renderMockSession(container);
+}
+
+function renderMockSetup(container) {
+  const tracks = availableTracks();
+  const deck = buildQuizDeck();
+
+  let html = '<div class="mock-setup">';
+  html += '<div class="mock-setup-title">🎤 Mock Interview</div>';
+  html += '<div class="mock-setup-sub">One question at a time, no peeking at the answer first. Reveal when you\'re ready, rate yourself, move on — just like a real panel. Ratings count toward the same review schedule as Practice mode.</div>';
+  html += '<label class="mock-field-label">Track</label>';
+  html += '<select class="quiz-select" id="mockTrackSelect">' +
+    '<option value="all">🎲 Full Mix — all ' + deck.length + ' cards</option>' +
+    tracks.map((t) => '<option value="' + escapeHtml(t) + '">' + escapeHtml(t) + ' (' + trackPoolSize(t) + ')</option>').join('') +
+  '</select>';
+  html += '<label class="mock-field-label">Length</label>';
+  html += '<select class="quiz-select" id="mockLengthSelect">' +
+    [10, 20, 30].map((n) => '<option value="' + n + '">' + n + ' questions</option>').join('') +
+  '</select>';
+  html += '<div class="mock-pool-hint" id="mockPoolHint"></div>';
+  html += '<button class="quiz-restart-btn" id="mockStartBtn">Start Mock Interview</button>';
+  html += '</div>';
+  container.innerHTML = html;
+
+  const trackSelect = document.getElementById('mockTrackSelect');
+  const lengthSelect = document.getElementById('mockLengthSelect');
+  const hint = document.getElementById('mockPoolHint');
+
+  function updateHint() {
+    const size = trackPoolSize(trackSelect.value);
+    const wanted = parseInt(lengthSelect.value, 10);
+    hint.textContent = wanted > size
+      ? 'This track only has ' + size + ' card' + (size === 1 ? '' : 's') + ' — the session will use all of them.'
+      : size + ' cards available in this track.';
+  }
+  updateHint();
+  trackSelect.addEventListener('change', updateHint);
+  lengthSelect.addEventListener('change', updateHint);
+
+  document.getElementById('mockStartBtn').addEventListener('click', () => {
+    startMockSession(trackSelect.value, parseInt(lengthSelect.value, 10));
+    renderQuiz();
+  });
+}
+
+function renderMockSession(container) {
+  const deck = buildQuizDeck();
+  const card = deck.find((c) => c.id === mockQueue[mockIndex]);
+  const progressPct = Math.round((mockIndex / mockQueue.length) * 100);
+
+  let html = '<div class="quiz-progress-bar"><div class="quiz-progress-fill" style="width:' + progressPct + '%"></div></div>';
+  html += '<div class="mock-session-meta">Question ' + (mockIndex + 1) + ' of ' + mockQueue.length +
+    (mockConfig.track !== 'all' ? ' · ' + escapeHtml(mockConfig.track) : ' · Full Mix') + '</div>';
+  html += '<div class="mock-question-card">' +
+    '<div class="mock-question-tag">// ' + escapeHtml(card.tag) + '</div>' +
+    '<div class="mock-question-text">' + escapeHtml(card.q) + '</div>' +
+  '</div>';
+
+  if (!mockRevealed) {
+    html += '<div class="mock-hint">Answer it out loud or in your head — then reveal.</div>';
+    html += '<button class="quiz-restart-btn" id="mockRevealBtn">Reveal Answer</button>';
+  } else {
+    html += '<div class="mock-answer-card">' +
+      '<div class="mock-answer-label">// Consultant Answer</div>' +
+      '<div class="mock-answer-text">' + escapeHtml(card.a) + '</div>' +
+    '</div>';
+    html += '<div class="quiz-rate-row mock-rate-row">' +
+      '<button class="quiz-rate-btn again" id="mockBlankBtn">❌ Blank</button>' +
+      '<button class="quiz-rate-btn partial" id="mockPartialBtn">🤔 Partial</button>' +
+      '<button class="quiz-rate-btn good" id="mockStrongBtn">✅ Strong</button>' +
+    '</div>';
+  }
+  html += '<button class="mock-exit-btn" id="mockExitBtn">Exit to setup</button>';
+
+  container.innerHTML = html;
+
+  if (!mockRevealed) {
+    document.getElementById('mockRevealBtn').addEventListener('click', () => { mockRevealed = true; renderQuiz(); });
+  } else {
+    document.getElementById('mockBlankBtn').addEventListener('click', () => rateMockCard(card.id, 'blank'));
+    document.getElementById('mockPartialBtn').addEventListener('click', () => rateMockCard(card.id, 'partial'));
+    document.getElementById('mockStrongBtn').addEventListener('click', () => rateMockCard(card.id, 'strong'));
+  }
+  document.getElementById('mockExitBtn').addEventListener('click', () => { mockConfig = null; renderQuiz(); });
+}
+
+function rateMockCard(id, rating) {
+  const qualityMap = { strong: 4, partial: 3, blank: 2 };
+  const s = loadSchedule();
+  scheduleCard(s, id, qualityMap[rating]);
+  saveSchedule(s);
+  mockResults.push({ id, rating });
+  mockIndex++;
+  mockRevealed = false;
+  renderQuiz();
+}
+
+function renderMockResults(container) {
+  const deck = buildQuizDeck();
+  const byId = {};
+  deck.forEach((c) => { byId[c.id] = c; });
+
+  const strong = mockResults.filter((r) => r.rating === 'strong').length;
+  const partial = mockResults.filter((r) => r.rating === 'partial').length;
+  const blank = mockResults.filter((r) => r.rating === 'blank').length;
+
+  const weakTags = {};
+  mockResults.filter((r) => r.rating !== 'strong').forEach((r) => {
+    const card = byId[r.id];
+    if (!card) return;
+    weakTags[card.tag] = (weakTags[card.tag] || 0) + 1;
+  });
+  const weakList = Object.entries(weakTags).sort((a, b) => b[1] - a[1]);
+
+  let html = '<div class="mock-results">';
+  html += '<div class="mock-results-title">Session Complete</div>';
+  html += '<div class="mock-results-score">' +
+    '<div class="mock-score strong"><span class="mock-score-num">' + strong + '</span><span class="mock-score-label">Strong</span></div>' +
+    '<div class="mock-score partial"><span class="mock-score-num">' + partial + '</span><span class="mock-score-label">Partial</span></div>' +
+    '<div class="mock-score blank"><span class="mock-score-num">' + blank + '</span><span class="mock-score-label">Blank</span></div>' +
+  '</div>';
+
+  if (weakList.length) {
+    html += '<div class="mock-weak-title">Worth another pass:</div>';
+    html += '<div class="mock-weak-list">' +
+      weakList.map(([tag, count]) =>
+        '<div class="mock-weak-item"><span>' + escapeHtml(tag) + '</span><span class="mock-weak-count">' + count + '</span></div>'
+      ).join('') +
+    '</div>';
+  } else {
+    html += '<div class="mock-weak-title">Clean sweep — everything rated Strong. 🎉</div>';
+  }
+
+  const weakSectionCard = mockResults
+    .filter((r) => r.rating !== 'strong')
+    .map((r) => byId[r.id])
+    .find((c) => c && c.section !== null && c.section !== undefined);
+  if (weakSectionCard && typeof sectionTitles !== 'undefined' && sectionTitles[weakSectionCard.section]) {
+    html += '<button class="quiz-restart-btn mock-jump-btn" id="mockReviewModuleBtn">Jump to ' + escapeHtml(sectionTitles[weakSectionCard.section]) + '</button>';
+  }
+
+  html += '<button class="quiz-restart-btn" id="mockRestartBtn">New Mock Interview</button>';
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  if (weakSectionCard) {
+    const jumpBtn = document.getElementById('mockReviewModuleBtn');
+    if (jumpBtn) jumpBtn.addEventListener('click', () => showSection(weakSectionCard.section));
+  }
+  document.getElementById('mockRestartBtn').addEventListener('click', () => { mockConfig = null; renderQuiz(); });
+}
+
+window.renderSaved = renderSaved;
+window.renderQuiz = renderQuiz;
+
+// ══════════════════════════════════════════
+// GLOSSARY — searches window.GLOSSARY_DATA (assets/glossary-data.js)
+// ══════════════════════════════════════════
+function renderGlossary() {
+  const root = document.getElementById('glossary-root');
+  if (!root) return;
+  const searchInput = document.getElementById('glossarySearch');
+  if (searchInput && !searchInput.dataset.wired) {
+    searchInput.addEventListener('input', () => renderGlossaryList(searchInput.value));
+    searchInput.dataset.wired = '1';
+  }
+  renderGlossaryList(searchInput ? searchInput.value : '');
+}
+
+function renderGlossaryList(query) {
+  const root = document.getElementById('glossary-root');
+  if (!root) return;
+  const terms = (window.GLOSSARY_DATA || []).slice().sort((a, b) => a.term.localeCompare(b.term));
+  const q = (query || '').trim().toLowerCase();
+  const filtered = q
+    ? terms.filter((t) =>
+        t.term.toLowerCase().includes(q) ||
+        (t.expansion && t.expansion.toLowerCase().includes(q)) ||
+        t.definition.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q))
+    : terms;
+
+  if (filtered.length === 0) {
+    root.innerHTML = '<div class="glossary-empty">No terms match "' + escapeHtml(query) + '".</div>';
+    return;
+  }
+
+  root.innerHTML =
+    '<div class="glossary-count">' + filtered.length + ' of ' + terms.length + ' terms</div>' +
+    '<div class="glossary-grid">' +
+    filtered.map((t) =>
+      '<div class="glossary-card">' +
+        '<div class="glossary-card-top">' +
+          '<span class="glossary-term">' + escapeHtml(t.term) + '</span>' +
+          '<span class="glossary-category">' + escapeHtml(t.category) + '</span>' +
+        '</div>' +
+        (t.expansion ? '<div class="glossary-expansion">' + escapeHtml(t.expansion) + '</div>' : '') +
+        '<div class="glossary-definition">' + escapeHtml(t.definition) + '</div>' +
+      '</div>'
+    ).join('') +
+    '</div>';
+}
+
+window.renderGlossary = renderGlossary;
+
+// ══════════════════════════════════════════
+// STUDY STREAKS — a calendar-day counter, incremented at most once per day
+// by any real navigation (see showSection() in the main inline script).
+// Deliberately keyed by date strings, not elapsed milliseconds — studying
+// at 11pm and again at 1am the next calendar day is still "yesterday then
+// today" for streak purposes, not a 2-hour gap.
+// ══════════════════════════════════════════
+const STREAK_KEY = 'mes_streak_v1';
+
+function dateStringDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function loadStreak() {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) || { current: 0, longest: 0, lastActiveDate: null }; }
+  catch (e) { return { current: 0, longest: 0, lastActiveDate: null }; }
+}
+function saveStreak(s) { localStorage.setItem(STREAK_KEY, JSON.stringify(s)); }
+
+function recordStudyActivity() {
+  const streak = loadStreak();
+  const today = dateStringDaysAgo(0);
+  if (streak.lastActiveDate === today) return; // already counted today
+  streak.current = (streak.lastActiveDate === dateStringDaysAgo(1)) ? streak.current + 1 : 1;
+  streak.longest = Math.max(streak.longest, streak.current);
+  streak.lastActiveDate = today;
+  saveStreak(streak);
+}
+window.recordStudyActivity = recordStudyActivity;
+
+// ══════════════════════════════════════════
+// PROGRESS DASHBOARD — reads data every other feature already collects
+// (visited sections, the quiz schedule, bookmarks) rather than tracking
+// anything new, plus a per-module quiz breakdown using each card's SM-2
+// ease factor as a rough "how solid is this module" signal.
+// ══════════════════════════════════════════
+function computeProgressStats() {
+  const schedule = loadSchedule();
+  const deck = buildQuizDeck();
+  const contentModulesVisited = Array.from(visitedSections).filter((i) => i < 16).length;
+  const learned = deck.filter((c) => schedule[c.id] && schedule[c.id].reps > 0).length;
+  const due = deck.filter((c) => isDue(schedule, c.id)).length;
+  const bookmarkCount = Object.keys(loadBookmarks()).length;
+  const streak = loadStreak();
+
+  const perModule = {};
+  let extraTotal = 0, extraAttempted = 0;
+  deck.forEach((card) => {
+    const sched = schedule[card.id];
+    if (card.section !== null && card.section !== undefined) {
+      const modIdx = card.section;
+      if (!perModule[modIdx]) perModule[modIdx] = { total: 0, attempted: 0, easeSum: 0 };
+      perModule[modIdx].total++;
+      if (sched) { perModule[modIdx].attempted++; perModule[modIdx].easeSum += sched.ease; }
+    } else {
+      extraTotal++;
+      if (sched) extraAttempted++;
+    }
+  });
+
+  return { contentModulesVisited, learned, due, bookmarkCount, deckSize: deck.length, perModule, extraTotal, extraAttempted, streakCurrent: streak.current, streakLongest: streak.longest };
+}
+
+function homeStatsHtml(stats) {
+  return '<div class="home-stat"><div class="home-stat-value">' + stats.contentModulesVisited + '/16</div><div class="home-stat-label">Modules visited</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.learned + '/' + stats.deckSize + '</div><div class="home-stat-label">Quiz cards learned</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.due + '</div><div class="home-stat-label">Due today</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + stats.bookmarkCount + '</div><div class="home-stat-label">Bookmarks</div></div>' +
+    '<div class="home-stat"><div class="home-stat-value">' + (stats.streakCurrent > 0 ? '🔥 ' + stats.streakCurrent : stats.streakCurrent) + '</div><div class="home-stat-label">Day streak</div></div>';
+}
+
+function renderHomeStats() {
+  const el = document.getElementById('homeStats');
+  if (!el) return;
+  const stats = computeProgressStats();
+  el.innerHTML = '<div class="home-stats-row">' + homeStatsHtml(stats) +
+    '</div><a class="home-stat-link" data-onclick="showSection(19)">View full progress →</a>';
+}
+window.renderHomeStats = renderHomeStats;
+
+function renderProgress() {
+  const root = document.getElementById('progress-root');
+  if (!root) return;
+  const stats = computeProgressStats();
+
+  let moduleRows = '';
+  for (let i = 0; i < 16; i++) {
+    const isLocked = !!document.querySelector('#sec-' + i + ' .locked-gate:not(.unlocked)');
+    const visited = visitedSections.has(i);
+    const modStats = stats.perModule[i];
+    let statusLabel, statusClass;
+    if (isLocked) { statusLabel = '🔒 Locked'; statusClass = 'locked'; }
+    else if (modStats && modStats.attempted > 0) {
+      // Require a meaningful sample before asserting Strong/Needs review —
+      // otherwise 1 lucky (or unlucky) card out of dozens would swing a
+      // verdict that's supposed to mean something.
+      const coverage = modStats.attempted / modStats.total;
+      const avgEase = modStats.easeSum / modStats.attempted;
+      if (coverage < 0.3) { statusLabel = 'In progress'; statusClass = 'visited'; }
+      else if (avgEase < 2.2) { statusLabel = 'Needs review'; statusClass = 'needs-review'; }
+      else { statusLabel = 'Strong'; statusClass = 'strong'; }
+    } else if (visited) { statusLabel = 'Visited, no quiz yet'; statusClass = 'visited'; }
+    else { statusLabel = 'Not started'; statusClass = 'not-started'; }
+
+    moduleRows +=
+      '<div class="progress-row">' +
+        '<div class="progress-row-title">' + escapeHtml(sectionTitles[i]) + '</div>' +
+        '<div class="progress-row-quiz">' + (modStats ? modStats.attempted + '/' + modStats.total + ' cards' : '—') + '</div>' +
+        '<div class="progress-row-status ' + statusClass + '">' + statusLabel + '</div>' +
+      '</div>';
+  }
+
+  root.innerHTML =
+    '<div class="home-stats-row">' + homeStatsHtml(stats) + '</div>' +
+    (stats.streakLongest > 0
+      ? '<div class="progress-extra-note">🔥 Best streak so far: ' + stats.streakLongest + ' day' + (stats.streakLongest === 1 ? '' : 's') + '.</div>'
+      : '') +
+    '<div class="progress-section-title">Per-module quiz performance</div>' +
+    '<div class="progress-table">' +
+      '<div class="progress-row progress-row-head"><div>Module</div><div>Quiz cards</div><div>Status</div></div>' +
+      moduleRows +
+    '</div>' +
+    (stats.extraTotal > 0
+      ? '<div class="progress-extra-note">Plus ' + stats.extraAttempted + '/' + stats.extraTotal + ' hand-written drill cards (calculations, acronyms) not tied to a specific module.</div>'
+      : '');
+}
+window.renderProgress = renderProgress;
+
+// ══════════════════════════════════════════
+// GLOBAL SEARCH — searches whatever concept cards and questions are
+// currently in the DOM (so it naturally only covers the free module plus
+// whatever's been unlocked) and the Glossary, from one overlay reachable
+// anywhere via the topbar icon or Ctrl/Cmd+K.
+// ══════════════════════════════════════════
+const TOTAL_CONTENT_MODULES = 16;
+let searchResultsCache = [];
+let searchDebounceTimer = null;
+
+function openSearchPanel() {
+  document.body.classList.add('search-open');
+  updateSearchCoverage();
+  const input = document.getElementById('searchInput');
+  if (!input.dataset.wired) {
+    input.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => runSearch(input.value), 150);
+    });
+    input.dataset.wired = '1';
+  }
+  input.focus();
+  runSearch(input.value);
+}
+window.openSearchPanel = openSearchPanel;
+
+function closeSearchPanel() {
+  document.body.classList.remove('search-open');
+}
+window.closeSearchPanel = closeSearchPanel;
+
+function updateSearchCoverage() {
+  // Scoped to sec-0..sec-15 (the 16 content modules this stat is about) —
+  // not a blanket .locked-gate query, which would also pick up Module 17's
+  // (Mock Interview & Quiz Mode) own separate gate and undercount by one
+  // for as long as that module specifically stays locked.
+  let lockedCount = 0;
+  for (let i = 0; i < TOTAL_CONTENT_MODULES; i++) {
+    if (document.querySelector('#sec-' + i + ' .locked-gate:not(.unlocked)')) lockedCount++;
+  }
+  const unlockedModules = TOTAL_CONTENT_MODULES - lockedCount;
+  const el = document.getElementById('searchCoverage');
+  if (!el) return;
+  el.textContent = lockedCount > 0
+    ? 'Searching ' + unlockedModules + ' of ' + TOTAL_CONTENT_MODULES + ' modules — unlock the rest to search their content too.'
+    : 'Searching all ' + TOTAL_CONTENT_MODULES + ' modules.';
+}
+
+function runSearch(query) {
+  const resultsEl = document.getElementById('searchResults');
+  if (!resultsEl) return;
+  const q = (query || '').trim().toLowerCase();
+  if (!q) {
+    resultsEl.innerHTML = '<div class="search-hint">Type to search concept cards, questions, and glossary terms. (Ctrl/Cmd+K opens this from anywhere.)</div>';
+    return;
+  }
+
+  const results = [];
+
+  document.querySelectorAll('.section .dd-wrap').forEach((wrap) => {
+    const titleEl = wrap.querySelector('.dd-title');
+    const summaryEl = wrap.querySelector('.dd-summary-text');
+    const titleText = titleEl ? titleEl.textContent.trim() : '';
+    const summaryText = summaryEl ? summaryEl.textContent.trim() : '';
+    if ((titleText + ' ' + summaryText).toLowerCase().includes(q)) {
+      results.push({ type: 'concept', title: titleText, snippet: truncate(summaryText, 140), section: sectionIndexOf(wrap), target: wrap });
+    }
+  });
+
+  document.querySelectorAll('.section .q-box').forEach((box) => {
+    const qEl = box.querySelector('.q-text');
+    const aEl = box.querySelector('.a-text');
+    const qStr = qEl ? qEl.textContent.trim() : '';
+    const aStr = aEl ? aEl.textContent.trim() : '';
+    if ((qStr + ' ' + aStr).toLowerCase().includes(q)) {
+      results.push({ type: 'question', title: qStr, snippet: truncate(aStr, 140), section: sectionIndexOf(box), target: box });
+    }
+  });
+
+  (window.GLOSSARY_DATA || []).forEach((t) => {
+    const hay = (t.term + ' ' + (t.expansion || '') + ' ' + t.definition + ' ' + t.category).toLowerCase();
+    if (hay.includes(q)) {
+      results.push({ type: 'glossary', title: t.term, snippet: truncate(t.definition, 140), glossaryTerm: t.term });
+    }
+  });
+
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<div class="search-hint">No matches for "' + escapeHtml(query) + '".</div>';
+    return;
+  }
+
+  searchResultsCache = results;
+  const shown = results.slice(0, 50);
+  resultsEl.innerHTML =
+    '<div class="search-count">' + results.length + ' result' + (results.length === 1 ? '' : 's') +
+      (results.length > 50 ? ' (showing first 50)' : '') + '</div>' +
+    shown.map((r, i) => {
+      const tag = r.type === 'glossary' ? 'Glossary' : (r.section !== null ? 'Module ' + (r.section + 1) : '');
+      return '<div class="search-result" data-idx="' + i + '">' +
+        '<div class="search-result-tag">' + escapeHtml(tag) + '</div>' +
+        '<div class="search-result-title">' + escapeHtml(r.title) + '</div>' +
+        '<div class="search-result-snippet">' + escapeHtml(r.snippet) + '</div>' +
+      '</div>';
+    }).join('');
+
+  resultsEl.querySelectorAll('.search-result').forEach((el) => {
+    el.addEventListener('click', () => {
+      const r = searchResultsCache[parseInt(el.dataset.idx, 10)];
+      closeSearchPanel();
+      if (r.type === 'glossary') {
+        showSection(18);
+        setTimeout(() => {
+          const gInput = document.getElementById('glossarySearch');
+          if (gInput) { gInput.value = r.glossaryTerm; gInput.dispatchEvent(new Event('input')); }
+        }, 100);
+        return;
+      }
+      showSection(r.section);
+      setTimeout(() => {
+        if (r.target && document.body.contains(r.target)) {
+          r.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          r.target.style.transition = 'box-shadow 0.3s';
+          r.target.style.boxShadow = '0 0 0 2px var(--amber)';
+          setTimeout(() => { r.target.style.boxShadow = ''; }, 1400);
+        }
+      }, 80);
+    });
+  });
+}
+
+// ══════════════════════════════════════════
+// FEEDBACK / REPORT ISSUE — no backend, so "sending" opens the user's own
+// email app with a pre-filled draft (app version + current screen included
+// automatically) addressed to the app owner. Same open/close pattern as the
+// global search overlay above (body class toggling backdrop + panel).
+// ══════════════════════════════════════════
+const FEEDBACK_EMAIL = 'primeatnit@gmail.com';
+
+function openFeedbackModal() {
+  document.body.classList.add('feedback-open');
+  document.getElementById('feedbackError').style.display = 'none';
+  document.getElementById('feedbackText').focus();
+}
+window.openFeedbackModal = openFeedbackModal;
+
+function closeFeedbackModal() {
+  document.body.classList.remove('feedback-open');
+}
+window.closeFeedbackModal = closeFeedbackModal;
+
+// "Purchase Access" buttons call this when no real PURCHASE_LINKS URL is
+// configured yet for the module in question — instead of a dead-end
+// "coming soon" label, it opens the existing feedback flow pre-filled so
+// the click is genuinely actionable (requests a key from the seller)
+// rather than doing nothing.
+function requestPurchaseForModule(moduleTitle) {
+  openFeedbackModal();
+  const typeSelect = document.getElementById('feedbackType');
+  if (typeSelect) typeSelect.value = 'Purchase inquiry';
+  const textarea = document.getElementById('feedbackText');
+  if (textarea && !textarea.value) {
+    textarea.value = 'I\'d like to purchase access to "' + moduleTitle + '." Please send me a license key or a way to pay.';
+  }
+}
+window.requestPurchaseForModule = requestPurchaseForModule;
+
+function sendFeedback() {
+  const type = document.getElementById('feedbackType').value;
+  const text = document.getElementById('feedbackText').value.trim();
+  if (!text) {
+    document.getElementById('feedbackError').style.display = '';
+    return;
+  }
+
+  const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const platform = isNative ? 'Android app' : 'Website';
+  const screen = (typeof currentSection !== 'undefined' && currentSection !== null && typeof sectionTitles !== 'undefined')
+    ? (sectionTitles[currentSection] || ('Section ' + currentSection))
+    : 'Home';
+  const version = window.APP_VERSION_NAME ? 'v' + window.APP_VERSION_NAME : 'unknown';
+
+  const subject = '[MES Architect Feedback] ' + type;
+  let body = text +
+    '\n\n---\n' +
+    'Type: ' + type + '\n' +
+    'App version: ' + version + '\n' +
+    'Platform: ' + platform + '\n' +
+    'Current screen: ' + screen;
+  const errors = window.MESDiagnostics ? window.MESDiagnostics.summary(5) : '';
+  if (errors) body += '\nRecent errors on this device:\n' + errors;
+
+  window.location.href = 'mailto:' + FEEDBACK_EMAIL +
+    '?subject=' + encodeURIComponent(subject) +
+    '&body=' + encodeURIComponent(body);
+
+  document.getElementById('feedbackText').value = '';
+  closeFeedbackModal();
+}
+window.sendFeedback = sendFeedback;
+
+// ══════════════════════════════════════════
+// SETTINGS PANEL — text size control, plus the Feedback and Check-for-
+// updates entry points relocated here from separate standalone spots
+// (sidebar footer) so there's one place for "app-level" controls instead
+// of several scattered ones. Text size uses CSS zoom (not a rem/calc
+// rewrite) since almost every font-size in this app is an absolute px
+// value, not rem-relative — zoom scales all of it uniformly and is fully
+// supported in the Chromium WebView this app ships in, plus Chrome/Edge
+// on the web.
+// ══════════════════════════════════════════
+const TEXT_SCALE_KEY = 'mes_text_scale_v1';
+const TEXT_SCALE_MIN = 0.85;
+const TEXT_SCALE_MAX = 1.4;
+const TEXT_SCALE_STEP = 0.1;
+const TEXT_SCALE_DEFAULT = 1;
+
+function loadTextScale() {
+  const saved = parseFloat(localStorage.getItem(TEXT_SCALE_KEY));
+  return isNaN(saved) ? TEXT_SCALE_DEFAULT : saved;
+}
+function saveTextScale(v) { localStorage.setItem(TEXT_SCALE_KEY, String(v)); }
+
+let textScale = loadTextScale();
+
+function applyTextScale() {
+  document.documentElement.style.zoom = textScale;
+  const display = document.getElementById('textSizeDisplay');
+  if (display) display.textContent = Math.round(textScale * 100) + '%';
+}
+window.applyTextScale = applyTextScale;
+
+function increaseTextSize() {
+  textScale = Math.min(TEXT_SCALE_MAX, Math.round((textScale + TEXT_SCALE_STEP) * 100) / 100);
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.increaseTextSize = increaseTextSize;
+
+function decreaseTextSize() {
+  textScale = Math.max(TEXT_SCALE_MIN, Math.round((textScale - TEXT_SCALE_STEP) * 100) / 100);
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.decreaseTextSize = decreaseTextSize;
+
+function resetTextSize() {
+  textScale = TEXT_SCALE_DEFAULT;
+  saveTextScale(textScale);
+  applyTextScale();
+}
+window.resetTextSize = resetTextSize;
+
+function openSettingsPanel() {
+  applyTextScale(); // sync the % display in case this is the first time the panel's been opened
+  document.body.classList.add('settings-open');
+}
+window.openSettingsPanel = openSettingsPanel;
+
+// Applied immediately (not deferred to DOMContentLoaded) so a persisted
+// non-default scale is in effect before first paint, not after a flash
+// of default-sized content.
+applyTextScale();
+
+function closeSettingsPanel() {
+  document.body.classList.remove('settings-open');
+}
+window.closeSettingsPanel = closeSettingsPanel;
+
+// ── Wrap every table so a wide one scrolls inside itself on small
+//    screens instead of forcing the whole page to scroll sideways ──
+function wrapTables() {
+  document.querySelectorAll('.section table').forEach((table) => {
+    if (!table.closest('.tbl-scroll')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'tbl-scroll';
+      table.parentNode.insertBefore(wrap, table);
+      wrap.appendChild(table);
+    }
+    addTableDataLabels(table);
+  });
+}
+
+// Below 900px, responsive.css turns each row into a stacked label:value
+// card (content: attr(data-label) on each <td>) instead of either
+// breaking words mid-way or forcing horizontal scroll on a many-column
+// table. Reads each column's real <th> text so no HTML content needs
+// to change for this to work.
+function addTableDataLabels(table) {
+  if (table.dataset.labelsAdded) return;
+  const headers = Array.from(table.querySelectorAll('thead th')).map((th) => th.textContent.trim());
+  if (!headers.length) return;
+  table.querySelectorAll('tbody tr').forEach((row) => {
+    Array.from(row.children).forEach((cell, i) => {
+      if (headers[i]) cell.setAttribute('data-label', headers[i]);
+    });
+  });
+  table.dataset.labelsAdded = '1';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  injectStars();
+  wrapTables();
+  // Home is the active view on first load, and its stats strip is built by
+  // this file — but this file loads after the INIT block that first shows
+  // Home, so that first render needs to happen here instead.
+  renderHomeStats();
+});
