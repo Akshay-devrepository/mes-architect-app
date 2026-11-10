@@ -1,0 +1,546 @@
+// ══════════════════════════════════════════
+// LICENSE.JS — client-side unlock for paid modules.
+//
+// Honest about what this is: this is Option C from the design discussion —
+// encrypted content with no backend. AES-256-GCM (Web Crypto, native to
+// every modern browser/WebView) means a wrong key fails cleanly (no partial
+// garbage output), and locked module content is never present in the page
+// source as plaintext — view-source only shows ciphertext. But once a
+// correct key decrypts it client-side, the plaintext exists in that
+// browser's memory/DOM, so a sufficiently determined user could still
+// extract it after unlocking. There is no way to fully prevent that without
+// a server that never sends the plaintext to unlicensed clients at all.
+// ══════════════════════════════════════════
+
+const LICENSE_PBKDF2_ITERATIONS = 100000; // must match scripts/encrypt-modules.js
+const UNLOCKED_CACHE_KEY = 'mes_unlocked_content_v1'; // { [moduleIndex]: decryptedHtml }
+const BUNDLE_KEY_CACHE_KEY = 'mes_bundle_key_v1';
+const INDIVIDUAL_KEY_CACHE_KEY = 'mes_individual_keys_v1'; // { [moduleIndex]: rawKey }
+
+// ── Purchase links now live in assets/purchase-links.js (window.PURCHASE_LINKS),
+// shared with the standalone sales page at buy.html so both "Buy" surfaces
+// read the same config and can't drift. ──
+
+function purchaseLinkFor(moduleIndex) {
+  return PURCHASE_LINKS.modules[moduleIndex + 1] || PURCHASE_LINKS.bundle || null;
+}
+window.purchaseLinkFor = purchaseLinkFor;
+
+// ── Keygen.sh integration (optional layer in front of the AES unlock below) ──
+// Set this to your Keygen account slug (Settings → the id in your dashboard
+// URL — public, not a secret) to let buyers enter a real Keygen-issued
+// license key instead of a raw AES passphrase. Each Keygen License's
+// metadata.unlockKey field should hold the actual module/bundle passphrase
+// from LICENSE-KEYS-SECRET.md — that passphrase is fetched fresh from
+// Keygen's response only after a valid check, never embedded in this file
+// or shown to the buyer directly. Leave blank to skip Keygen entirely and
+// only accept raw passphrases (today's behavior).
+const KEYGEN_ACCOUNT_ID = 'baf65a1d-0b72-4855-a1ab-34ca39421b88';
+
+const KEYGEN_ERROR_MESSAGES = {
+  NOT_FOUND: null, // not a recognized Keygen key — caller falls back to raw-passphrase
+  EXPIRED: 'This license key has expired.',
+  SUSPENDED: 'This license key has been suspended.',
+  BANNED: 'This license key has been banned.',
+  TOO_MANY_MACHINES: 'This license key has already been activated on its device limit.',
+  FRAUD: 'This license key was flagged and is no longer valid.'
+};
+
+// ── Device activation limit ──
+// Enforced by Keygen's own policy settings (maxMachines + strict mode), not
+// by anything in this file — see README "Limiting activations per key".
+// This device gets a random, locally-stored id the first time a Keygen key
+// is entered (there's no stable hardware fingerprint available from a
+// browser/WebView without a native plugin, so clearing site data or
+// reinstalling the app looks like "a new device" and uses another
+// activation slot — documented, not hidden). Activation itself only
+// happens once per device: after that this flag skips straight to
+// validate-only for every later key entry, so applying multiple module
+// keys on an already-activated device never risks tripping the limit.
+const DEVICE_FINGERPRINT_KEY = 'mes_device_fingerprint_v1';
+const KEYGEN_ACTIVATED_FLAG_KEY = 'mes_keygen_activated_v1';
+
+function getDeviceFingerprint() {
+  let fp = localStorage.getItem(DEVICE_FINGERPRINT_KEY);
+  if (fp) return fp;
+  if (window.crypto && crypto.randomUUID) {
+    fp = 'dev-' + crypto.randomUUID();
+  } else {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    fp = 'dev-' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  localStorage.setItem(DEVICE_FINGERPRINT_KEY, fp);
+  return fp;
+}
+
+// Activates this device as a "machine" against the license (once per
+// device — see comment above). Returns { ok: true } on success, or
+// { ok: false, message } — most importantly when the policy's machine
+// limit is already used up, in which case Keygen rejects the activation
+// and that message is passed straight through to the user.
+async function ensureMachineActivated(key, licenseId) {
+  if (localStorage.getItem(KEYGEN_ACTIVATED_FLAG_KEY) === '1') return { ok: true };
+  let res;
+  try {
+    res = await fetch('https://api.keygen.sh/v1/accounts/' + KEYGEN_ACCOUNT_ID + '/machines', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/vnd.api+json',
+        'Accept': 'application/vnd.api+json',
+        'Authorization': 'License ' + key
+      },
+      body: JSON.stringify({
+        data: {
+          type: 'machines',
+          attributes: { fingerprint: getDeviceFingerprint(), platform: (navigator.platform || 'web') },
+          relationships: { license: { data: { type: 'licenses', id: licenseId } } }
+        }
+      })
+    });
+  } catch (e) {
+    return { ok: false, message: 'Could not reach the license server to activate this device — check your connection and try again.' };
+  }
+  if (res.status === 201) {
+    localStorage.setItem(KEYGEN_ACTIVATED_FLAG_KEY, '1');
+    return { ok: true };
+  }
+  let body = null;
+  try { body = await res.json(); } catch (e) {}
+  const detail = body && body.errors && body.errors[0] && (body.errors[0].detail || body.errors[0].title);
+  return { ok: false, message: detail || 'This license key has already been activated on its device limit.' };
+}
+
+// Returns { ok: true, unlockKey } on a valid Keygen license that this
+// device successfully activated against, { ok: false, message } on a
+// definitive Keygen rejection (expired/suspended/device limit/etc — don't
+// fall back), or null if Keygen wasn't reachable / configured / didn't
+// recognize the key at all (caller should fall back to a raw passphrase).
+async function validateKeygenLicense(key) {
+  if (!KEYGEN_ACCOUNT_ID) return null;
+  let res;
+  try {
+    res = await fetch('https://api.keygen.sh/v1/accounts/' + KEYGEN_ACCOUNT_ID + '/licenses/actions/validate-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/vnd.api+json', 'Accept': 'application/vnd.api+json' },
+      body: JSON.stringify({ meta: { key } })
+    });
+  } catch (e) {
+    return null; // offline, CORS, Keygen down, etc — fall back to raw-passphrase
+  }
+  let body;
+  try { body = await res.json(); } catch (e) { return null; }
+
+  const code = body && body.meta && body.meta.code;
+  if (!(body && body.meta && body.meta.valid)) {
+    if (code === 'NOT_FOUND' || !code) return null; // not a Keygen key we recognize — try raw-passphrase
+    return { ok: false, message: KEYGEN_ERROR_MESSAGES[code] || ('This license key isn’t valid (' + code + ').') };
+  }
+
+  const licenseId = body.data && body.data.id;
+  const unlockKey = body.data && body.data.attributes && body.data.attributes.metadata &&
+    body.data.attributes.metadata.unlockKey;
+  if (!unlockKey || !licenseId) {
+    return { ok: false, message: 'This license key is valid but isn’t configured to unlock anything — contact the seller.' };
+  }
+
+  const activation = await ensureMachineActivated(key, licenseId);
+  if (!activation.ok) return { ok: false, message: activation.message };
+
+  return { ok: true, unlockKey };
+}
+
+// Resolves whatever the user typed into the actual AES passphrase to try:
+// if it's a valid Keygen license, that license's own unlockKey; otherwise
+// (Keygen not configured, offline, or not a Keygen key at all) the raw
+// input itself, preserving the original no-backend behavior as a fallback.
+async function resolveUnlockKey(rawInput) {
+  const keygenResult = await validateKeygenLicense(rawInput);
+  if (keygenResult === null) return { key: rawInput, error: null };
+  if (keygenResult.ok) return { key: keygenResult.unlockKey, error: null };
+  return { key: null, error: keygenResult.message };
+}
+
+function b64ToBuf(b64) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+async function deriveAesKey(passphrase, saltB64) {
+  const salt = b64ToBuf(saltB64);
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: LICENSE_PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt']
+  );
+}
+
+async function tryDecrypt(encObj, passphrase) {
+  try {
+    const key = await deriveAesKey(passphrase, encObj.salt);
+    const iv = b64ToBuf(encObj.iv);
+    const ctWithTag = b64ToBuf(encObj.ct);
+    const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ctWithTag);
+    return new TextDecoder().decode(plainBuf);
+  } catch (e) {
+    return null; // wrong key -> GCM authentication fails -> throws -> treat as "no match"
+  }
+}
+
+function loadUnlockedCache() {
+  try { return JSON.parse(localStorage.getItem(UNLOCKED_CACHE_KEY)) || {}; }
+  catch (e) { return {}; }
+}
+function saveUnlockedCache(map) {
+  localStorage.setItem(UNLOCKED_CACHE_KEY, JSON.stringify(map));
+}
+
+function revealModule(gate, plaintext) {
+  const unlockedDiv = gate.nextElementSibling;
+  unlockedDiv.innerHTML = window.neutralizeInlineHandlers(plaintext);
+  unlockedDiv.style.display = '';
+  gate.style.display = 'none';
+  gate.classList.add('unlocked');
+  // Newly-revealed content needs the same DOM-scanning enhancements every
+  // other module already got on page load.
+  if (window.injectStars) window.injectStars();
+  if (window.wrapTables) window.wrapTables();
+  const grid = document.getElementById('homeGrid');
+  if (grid) grid.dataset.built = '0'; // force the lock badge to refresh next Home render
+  // Quiz Mode memoizes its deck the first time anything asks for it (see
+  // enhance.js buildQuizDeck) — that can happen before this module's
+  // content exists yet (enhance.js's own DOMContentLoaded handler runs
+  // before this file's restore-from-cache loop finishes), silently
+  // freezing its questions out of the deck for the rest of the session.
+  // `quizDeck` is enhance.js's shared top-level `let` — reachable here
+  // since both files execute in the same global scope.
+  if (typeof quizDeck !== 'undefined') quizDeck = null;
+  // Mock Interview & Quiz Mode's #quiz-root mount point doesn't exist
+  // until this exact reveal — showSection(16) already calls renderQuiz()
+  // on navigation, but a user can also unlock while already sitting on
+  // this now-locked module without navigating away and back.
+  if (gate.dataset.module === '16' && window.renderQuiz) window.renderQuiz();
+  // The translate controls were built once on page load and dimmed/disabled
+  // for whichever modules were still locked at that point — re-check now
+  // that this one just unlocked.
+  if (window.refreshTranslateLockUI) window.refreshTranslateLockUI(gate.dataset.module);
+}
+
+// Each locked module's ciphertext lives in assets/modules/sec-<idx>.json
+// (see scripts/split-module-ciphertext.js) instead of inline in index.html,
+// so the ~4.4 MB of it is only downloaded for a module someone actually
+// tries a key on. The service worker pre-caches these files in the
+// background after install, so unlocking still works offline. The path is
+// built from the numeric index only — never from page-supplied text.
+const moduleCiphertextCache = {};
+function loadModuleCiphertext(idx) {
+  const n = parseInt(idx, 10);
+  if (!Number.isInteger(n) || n < 0) return Promise.reject(new Error('bad module index'));
+  if (!moduleCiphertextCache[n]) {
+    moduleCiphertextCache[n] = fetch('assets/modules/sec-' + n + '.json')
+      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .catch((e) => { delete moduleCiphertextCache[n]; throw e; });
+  }
+  return moduleCiphertextCache[n];
+}
+
+// Resolves to false (key doesn't fit), 'individual' or 'bundle' (which
+// kind of key it was). Rejects only if the ciphertext couldn't be loaded.
+async function attemptUnlockModule(gate, keyInput) {
+  const idx = gate.dataset.module;
+  const { individual, bundle } = await loadModuleCiphertext(idx);
+
+  let plaintext = await tryDecrypt(individual, keyInput);
+  let matchedBundle = false;
+  if (!plaintext) {
+    plaintext = await tryDecrypt(bundle, keyInput + '::sec-' + idx);
+    matchedBundle = !!plaintext;
+  }
+  if (!plaintext) return false;
+
+  const cache = loadUnlockedCache();
+  cache[idx] = plaintext;
+  saveUnlockedCache(cache);
+  if (matchedBundle) {
+    localStorage.setItem(BUNDLE_KEY_CACHE_KEY, keyInput);
+  } else {
+    // Mirrors the bundle-key persistence above — needed so a later action
+    // that re-decrypts THIS module's content with a different ciphertext
+    // (e.g. loading a pre-translated language variant, see translate.js)
+    // can reuse the same already-proven key instead of re-prompting.
+    let individualKeys = {};
+    try { individualKeys = JSON.parse(localStorage.getItem(INDIVIDUAL_KEY_CACHE_KEY)) || {}; } catch (e) {}
+    individualKeys[idx] = keyInput;
+    localStorage.setItem(INDIVIDUAL_KEY_CACHE_KEY, JSON.stringify(individualKeys));
+  }
+  revealModule(gate, plaintext);
+  return matchedBundle ? 'bundle' : 'individual';
+}
+
+// Account-based unlock (assets/account.js): content comes from the API
+// already decrypted, and goes through the same reveal + offline cache.
+function revealModuleFromServer(section, html) {
+  const gate = document.querySelector('.locked-gate[data-module="' + section + '"]');
+  if (!gate || gate.classList.contains('unlocked')) return;
+  const cache = loadUnlockedCache();
+  cache[section] = html;
+  saveUnlockedCache(cache);
+  revealModule(gate, html);
+}
+window.revealModuleFromServer = revealModuleFromServer;
+
+function forgetUnlockedModules(sections) {
+  const cache = loadUnlockedCache();
+  sections.forEach((s) => { delete cache[s]; });
+  saveUnlockedCache(cache);
+}
+window.forgetUnlockedModules = forgetUnlockedModules;
+
+// The raw AES passphrase that successfully unlocked a given module, if
+// still available — either its own individual key, or the bundle key
+// (reconstructed the same way attemptUnlockModule() derives it). Used to
+// decrypt OTHER ciphertext for the same module (pre-translated language
+// variants) without asking the user to re-enter anything.
+function getUnlockKeyForModule(idx) {
+  let individualKeys = {};
+  try { individualKeys = JSON.parse(localStorage.getItem(INDIVIDUAL_KEY_CACHE_KEY)) || {}; } catch (e) {}
+  if (individualKeys[idx]) return { key: individualKeys[idx], isBundle: false };
+  const bundleKey = localStorage.getItem(BUNDLE_KEY_CACHE_KEY);
+  if (bundleKey) return { key: bundleKey, isBundle: true };
+  return null;
+}
+window.getUnlockKeyForModule = getUnlockKeyForModule;
+
+async function unlockAllWithKey(key) {
+  const gates = document.querySelectorAll('.locked-gate:not(.unlocked)');
+  for (const gate of gates) {
+    // A module whose file can't be fetched right now (offline, first visit)
+    // just stays locked; the others still get their chance.
+    await attemptUnlockModule(gate, key).catch(() => false);
+  }
+  refreshHomeIfActive();
+}
+
+// Individual keys are issued as MES-M<NN>-… (scripts/encrypt-modules.js),
+// so the module they belong to can be tried first without downloading and
+// test-decrypting every other module.
+function moduleIndexHintedByKey(key) {
+  const m = /^MES-M(\d{2})-/.exec(key);
+  return m ? String(parseInt(m[1], 10) - 1) : null;
+}
+window.unlockAllWithKey = unlockAllWithKey;
+
+// revealModule() already invalidates the Home card grid's cache
+// (grid.dataset.built = '0') on every unlock, but invalidating isn't the
+// same as re-rendering — if Home happens to be the screen currently on
+// screen (index null in the main script's currentSection), its cards
+// would otherwise keep showing stale locked/"coming soon" badges until
+// the user navigates away and back. currentSection/window.renderHome are
+// the main inline script's globals, reachable here since every script on
+// this page shares one global scope.
+function refreshHomeIfActive() {
+  if (typeof currentSection !== 'undefined' && currentSection === null && window.renderHome) {
+    window.renderHome();
+  }
+}
+
+async function tryUnlockGate(button) {
+  const gate = button.closest('.locked-gate');
+  const input = gate.querySelector('.locked-key-input');
+  const errorEl = gate.querySelector('.locked-error');
+  const rawKey = input.value.trim();
+  if (!rawKey) return;
+  button.disabled = true;
+  const originalLabel = button.textContent;
+  button.textContent = 'Checking…';
+
+  const resolved = await resolveUnlockKey(rawKey);
+  let result = false;
+  let loadFailed = false;
+  if (resolved.key) {
+    try { result = await attemptUnlockModule(gate, resolved.key); }
+    catch (e) { loadFailed = true; }
+  }
+
+  button.disabled = false;
+  button.textContent = originalLabel;
+  if (!result) {
+    errorEl.textContent = loadFailed
+      ? 'Couldn’t load this module — check your connection and try again.'
+      : (resolved.error || 'That key didn’t unlock this module — check for typos.');
+    errorEl.style.display = 'block';
+    return;
+  }
+  errorEl.style.display = 'none';
+  // A bundle key also unlocks every other still-locked module — sweep the
+  // rest right away. An individual key only ever fits its own module.
+  if (result === 'bundle') await unlockAllWithKey(resolved.key);
+  else refreshHomeIfActive();
+}
+window.tryUnlockGate = tryUnlockGate;
+
+// ── Global "enter a license key" entry point (sidebar footer) — lets
+//    someone unlock without having to open the specific module first. ──
+async function tryGlobalUnlock() {
+  const input = document.getElementById('globalLicenseInput');
+  const status = document.getElementById('globalLicenseStatus');
+  const rawKey = input.value.trim();
+  if (!rawKey) return;
+  status.textContent = 'Checking…';
+
+  const resolved = await resolveUnlockKey(rawKey);
+  if (!resolved.key) {
+    status.textContent = resolved.error || 'That key didn’t match anything.';
+    setTimeout(() => { status.textContent = ''; }, 5000);
+    return;
+  }
+
+  const before = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
+  const hinted = moduleIndexHintedByKey(resolved.key);
+  const hintedGate = hinted && document.querySelector('.locked-gate:not(.unlocked)[data-module="' + hinted + '"]');
+  const hintedResult = hintedGate ? await attemptUnlockModule(hintedGate, resolved.key).catch(() => false) : false;
+  if (hintedResult === 'individual') refreshHomeIfActive();
+  else await unlockAllWithKey(resolved.key);
+  const after = document.querySelectorAll('.locked-gate:not(.unlocked)').length;
+  const unlockedCount = before - after;
+  if (unlockedCount > 0) {
+    status.textContent = '✓ Unlocked ' + unlockedCount + ' module' + (unlockedCount === 1 ? '' : 's') + '.';
+    input.value = '';
+  } else {
+    status.textContent = 'That key didn’t match anything still locked.';
+  }
+  setTimeout(() => { status.textContent = ''; }, 4000);
+}
+window.tryGlobalUnlock = tryGlobalUnlock;
+
+function addGlobalLicenseUI() {
+  const footer = document.getElementById('sidebarFooter');
+  if (!footer || document.getElementById('globalLicenseRow')) return;
+  const buyRow = PURCHASE_LINKS.bundle
+    ? '<a class="global-buy-link" href="' + PURCHASE_LINKS.bundle + '" target="_blank" rel="noopener">💳 Get full access</a>'
+    : '<button class="global-buy-link global-buy-request" type="button">💳 Purchase Full Access</button>';
+  const row = document.createElement('div');
+  row.id = 'globalLicenseRow';
+  row.innerHTML =
+    buyRow +
+    '<div class="global-license-label">🔑 Have a license key?</div>' +
+    '<div class="global-license-input-row">' +
+      '<input type="text" id="globalLicenseInput" placeholder="Paste key" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button data-onclick="tryGlobalUnlock()">Apply</button>' +
+    '</div>' +
+    '<div class="global-license-hint">Same key works on any device — just paste it again here.</div>' +
+    '<div id="globalLicenseStatus" class="global-license-status"></div>';
+  footer.appendChild(row);
+  if (!PURCHASE_LINKS.bundle) {
+    row.querySelector('.global-buy-request').addEventListener('click', () => {
+      if (window.requestPurchaseForModule) window.requestPurchaseForModule('the full MES Architect bundle');
+    });
+  }
+}
+
+// Inserts a "Buy Access" link (or a "contact the seller" fallback if no
+// link is configured for this module yet) into a still-locked gate, right
+// above the key-entry row.
+// Curiosity-hook teaser — a few persuasive lines of real prose, shown
+// above .locked-desc's plain "enter your key" instructions so a prospective
+// buyer reads something enticing before the transactional copy, not after.
+// Deliberately not written for every module (see module-preview-data.js) —
+// only where a genuine hook earns the extra attention above the fold.
+function addPreviewHookToGate(gate) {
+  if (gate.querySelector('.locked-hook')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const hook = window.MODULE_PREVIEW_HOOK && window.MODULE_PREVIEW_HOOK[idx];
+  if (!hook) return;
+
+  const titleEl = gate.querySelector('.locked-title');
+  if (!titleEl) return;
+
+  const p = document.createElement('div');
+  p.className = 'locked-hook';
+  p.textContent = hook;
+  titleEl.insertAdjacentElement('afterend', p);
+}
+
+// "What's inside" teaser — a few genuine topic bullets pulled from the
+// module's real content (see module-preview-data.js), shown right after
+// the locked-desc paragraph so a prospective buyer sees real value before
+// hitting the buy button or key input. Anchored off .locked-desc (not the
+// input row) so it renders correctly regardless of whether addBuyLinkToGate
+// has already inserted its own row.
+function addPreviewTopicsToGate(gate) {
+  if (gate.querySelector('.locked-preview-topics')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const topics = window.MODULE_PREVIEW_TOPICS && window.MODULE_PREVIEW_TOPICS[idx];
+  if (!topics || !topics.length) return;
+
+  const descEl = gate.querySelector('.locked-desc');
+  if (!descEl) return;
+
+  const box = document.createElement('div');
+  box.className = 'locked-preview-topics';
+  box.innerHTML =
+    '<div class="locked-preview-label">🔍 What\'s inside</div>' +
+    '<ul class="locked-preview-list">' +
+      topics.map((t) => '<li>' + escapeHtml(t) + '</li>').join('') +
+    '</ul>';
+  descEl.insertAdjacentElement('afterend', box);
+}
+
+function addBuyLinkToGate(gate) {
+  if (gate.querySelector('.locked-buy-row')) return;
+  const idx = parseInt(gate.dataset.module, 10);
+  const link = purchaseLinkFor(idx);
+  const title = (typeof sectionTitles !== 'undefined' && sectionTitles[idx]) || ('Module ' + (idx + 1));
+  const row = document.createElement('div');
+  row.className = 'locked-buy-row';
+  row.innerHTML = link
+    ? '<a class="locked-buy-btn" href="' + link + '" target="_blank" rel="noopener">💳 Purchase Access to This Module</a>'
+    : '<button class="locked-buy-btn locked-buy-request" type="button">💳 Purchase Access to This Module</button>';
+  const inputRow = gate.querySelector('.locked-input-row');
+  gate.insertBefore(row, inputRow);
+  if (!link) {
+    row.querySelector('.locked-buy-request').addEventListener('click', () => {
+      if (window.requestPurchaseForModule) window.requestPurchaseForModule(title);
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const hasLockedModules = document.querySelector('.locked-gate');
+  if (!hasLockedModules) return;
+
+  addGlobalLicenseUI();
+
+  // Restore anything unlocked in an earlier visit.
+  const cache = loadUnlockedCache();
+  document.querySelectorAll('.locked-gate').forEach((gate) => {
+    const idx = gate.dataset.module;
+    if (cache[idx]) revealModule(gate, cache[idx]);
+  });
+
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addPreviewHookToGate);
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addPreviewTopicsToGate);
+  document.querySelectorAll('.locked-gate:not(.unlocked)').forEach(addBuyLinkToGate);
+
+  // If a bundle key was validated before, auto-unlock anything still
+  // locked (covers a case where more modules got added after they bought).
+  const savedBundleKey = localStorage.getItem(BUNDLE_KEY_CACHE_KEY);
+  if (savedBundleKey) await unlockAllWithKey(savedBundleKey);
+
+  // enhance.js's own DOMContentLoaded handler (which builds the Home stats
+  // strip) runs before this one finishes restoring cached-unlocked modules
+  // — refresh it now that the true unlock state actually exists.
+  if (window.renderHomeStats) window.renderHomeStats();
+  // The Home card grid was already built once (by the main script's own
+  // synchronous INIT block, before this handler had restored anything from
+  // cache) — without this, a returning user whose modules were already
+  // unlocked in a previous session sees stale "locked"/"coming soon" home
+  // cards on launch until they navigate away and back.
+  refreshHomeIfActive();
+});
