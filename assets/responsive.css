@@ -1,0 +1,375 @@
+/* ══════════════════════════════════════════
+   RESPONSIVE / COLLAPSIBLE MENU OVERRIDES
+   Loaded after the page's inline <style> block, so equal-
+   specificity selectors here win the cascade without !important.
+   Breakpoints: 900px = drawer vs push sidebar, 700px = phone,
+   480px = small phone.
+══════════════════════════════════════════ */
+
+/* ── COLLAPSIBLE SIDEBAR (all screen sizes) ── */
+#sidebar {
+  transition: transform 0.28s ease;
+}
+#main {
+  /* The single flex-flow child of <body> (the sidebar is position:fixed,
+     out of flow) — without min-width:0 here, a wide child anywhere inside
+     (e.g. a <pre> ASCII diagram, which needs to be wide) stretches THIS
+     box instead of scrolling internally, which is what caused the
+     whole-page horizontal scroll. This is the actual fix for that. */
+  min-width: 0;
+  transition: margin-left 0.28s ease;
+}
+#sidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,14,0.6);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 99;
+}
+
+/* Mobile / small-tablet default: drawer closed, overlays content when open */
+@media (max-width: 900px) {
+  #sidebar { transform: translateX(-100%); }
+  #main { margin-left: 0; }
+  body.sidebar-toggled #sidebar { transform: translateX(0); box-shadow: 8px 0 30px rgba(0,0,0,0.5); }
+  body.sidebar-toggled #sidebarBackdrop { opacity: 1; pointer-events: auto; }
+}
+
+/* Desktop / large tablet default: sidebar open and pushes content over;
+   toggling collapses it fully so the reading column can go full width. */
+@media (min-width: 901px) {
+  #sidebar { transform: translateX(0); }
+  #main { margin-left: 260px; }
+  #sidebarBackdrop { display: none; }
+  body.sidebar-toggled #sidebar { transform: translateX(-100%); }
+  body.sidebar-toggled #main { margin-left: 0; }
+}
+
+/* ── HAMBURGER + BACK/HOME BUTTONS ── */
+.topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topbar-left > div { min-width: 0; }
+#menuToggleBtn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  margin-right: 6px;
+}
+#menuToggleBtn:hover { border-color: var(--amber); }
+#menuToggleBtn span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--text-dim);
+  border-radius: 1px;
+  transition: background 0.2s;
+}
+#menuToggleBtn:hover span { background: var(--amber); }
+
+.nav-icon-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.nav-icon-btn:hover { border-color: var(--amber); color: var(--amber); }
+.topbar-right-icons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .topbar-left { gap: 6px; }
+  #menuToggleBtn, .nav-icon-btn { width: 30px; height: 30px; margin-right: 0; }
+}
+
+/* ── TOPBAR ── */
+.topbar { padding: 10px 16px; gap: 10px; }
+.topbar-section {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 46vw;
+}
+.topbar-controls { flex-shrink: 0; }
+
+@media (max-width: 700px) {
+  .topbar { padding: 10px 12px; }
+  .topbar-breadcrumb { display: none; }
+  .topbar-section { max-width: 42vw; }
+  .btn-sm { padding: 6px 10px; }
+}
+
+@media (max-width: 480px) {
+  .topbar-controls .btn-label { display: none; }
+  .btn-sm { padding: 7px 9px; }
+}
+
+/* ── SIDEBAR CONTENT SPACING ON NARROW DRAWER ── */
+@media (max-width: 340px) {
+  #sidebar { width: 88vw; min-width: 0; }
+}
+
+/* ── OVERFLOW SAFETY NET ──
+   No text should ever clip off the edge of the screen:
+   - min-width:0 undoes the flex/grid default of "never shrink below my
+     content's natural width", which is the #1 cause of a text-bearing
+     flex/grid child silently overflowing its row on a narrow screen.
+   - overflow-wrap:anywhere lets a single unbreakable long token (a URL,
+     an acronym string, a long compound word) break instead of pushing
+     the layout wider than the viewport. Diagrams are exempted since
+     they're deliberately monospaced ASCII-art that scrolls horizontally
+     instead (see .tbl-scroll / .diagram overflow-x:auto). */
+.section *, #sidebar *, .topbar *, #ai-chat-box *, .home-card *, #updateBanner * {
+  min-width: 0;
+}
+.section *:not(.diagram):not(.diagram *),
+#sidebar *, .topbar *, #ai-chat-box .msg-bubble, .home-card * {
+  overflow-wrap: break-word;
+}
+/* overflow-wrap inherits, so excluding .diagram from the rule above isn't
+   enough on its own — it still inherits "anywhere" from its parent and
+   would mangle the ASCII-art alignment. Reset it back explicitly. */
+.diagram, .diagram * {
+  overflow-wrap: normal;
+}
+/* Buttons/badges/icons need their intrinsic size back, not a shrunk box */
+.dd-icon, .home-card-icon, .home-card-arrow, .nav-dot, .star-btn,
+.btn-sm, .nav-icon-btn, #menuToggleBtn, .level-pill, .dd-tag {
+  min-width: max-content;
+}
+
+/* ── FLUID TYPOGRAPHY (scales continuously with viewport width instead
+     of jumping at fixed breakpoints) ── */
+body { font-size: clamp(12.5px, 3.4vw, 14px); }
+.section-title { font-size: clamp(19px, 5.5vw, 28px); }
+.section-desc { font-size: clamp(12px, 3.1vw, 14px); }
+.section-tag { font-size: clamp(9px, 2.3vw, 10px); }
+.dd-title { font-size: clamp(13px, 3.6vw, 15px); }
+.dd-summary-text { font-size: clamp(11.5px, 3vw, 13px); }
+.card-title { font-size: clamp(12.5px, 3.2vw, 14px); }
+.q-box .q-text { font-size: clamp(12px, 3vw, 13px); }
+.q-box .a-text { font-size: clamp(11px, 2.8vw, 12px); }
+.topbar-section { font-size: clamp(11px, 3vw, 13px); }
+.nav-item { font-size: clamp(11px, 2.6vw, 12px); }
+.sidebar-title { font-size: clamp(14px, 3.6vw, 16px); }
+.home-card-title { font-size: clamp(13px, 3.4vw, 15px); }
+.home-card-desc { font-size: clamp(11.5px, 2.9vw, 12.5px); }
+
+/* ── SECTION LAYOUT ── */
+.section { padding: 40px 40px 80px; }
+
+@media (max-width: 1024px) {
+  .section { padding: 28px 24px 60px; }
+}
+@media (max-width: 700px) {
+  .section { padding: 20px 16px 56px; }
+  .section-header { margin-bottom: 24px; padding-bottom: 16px; }
+}
+@media (max-width: 480px) {
+  .section { padding: 16px 12px 56px; }
+}
+
+/* ── GENERIC MULTI-COLUMN GRIDS REFLOW BY AVAILABLE WIDTH ── */
+@media (max-width: 1024px) {
+  .grid-3, .grid-4, .dd-3col {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  .grid-2, .dd-2col {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .grid-2, .grid-3, .grid-4, .dd-2col, .dd-3col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── CONCEPT CARDS / QUESTION CARDS ── */
+@media (max-width: 700px) {
+  .dd-header { padding: 14px 16px; padding-right: 44px; gap: 10px; }
+  .dd-icon { width: 30px; height: 30px; font-size: 14px; }
+  .dd-body-inner { padding: 18px 16px; }
+  .dd-btn-row { padding: 0 16px 12px; flex-wrap: wrap; }
+  .q-box { padding: 12px 14px; }
+  .card { padding: 16px; }
+}
+
+/* ── TABLES: never let a wide table force page-level horizontal scroll ── */
+.tbl-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 16px 0;
+}
+.tbl-scroll table { margin: 0 !important; }
+.tbl, .tbl-scroll table {
+  /* Fluid, not a fixed drop at one breakpoint — shrinks continuously as the
+     screen narrows, so most tables end up needing little or no internal
+     scroll instead of jumping straight to a fixed 12px at exactly 700px. */
+  font-size: clamp(10px, 2.8vw, 13px);
+}
+
+/* ── RESPONSIVE TABLE -> CARD TRANSFORM (mobile + tablet) ──
+   A real <table> with 5-7 columns has nowhere near enough width on a
+   phone or tablet to stay readable — squeezing columns either forces
+   words to break mid-way (the bug this replaces) or makes a horizontal-
+   scroll table, which is hard to discover and awkward to read a row at
+   a time. Below 900px (this app's existing sidebar-collapse breakpoint,
+   reused here as the "compact" tier), each row instead becomes its own
+   card with label:value pairs stacked vertically — every column fits at
+   full width, nothing scrolls, nothing breaks. data-label attributes are
+   injected once per cell by wrapTables() in enhance.js, reading each
+   column's real <th> text so this needs no HTML content changes. */
+@media (max-width: 900px) {
+  .tbl-scroll { overflow-x: visible; }
+  .tbl-scroll table.tbl,
+  .tbl-scroll table.tbl thead,
+  .tbl-scroll table.tbl tbody,
+  .tbl-scroll table.tbl tr,
+  .tbl-scroll table.tbl th,
+  .tbl-scroll table.tbl td {
+    display: block;
+    width: auto !important;
+  }
+  .tbl-scroll table.tbl thead {
+    /* Visually hidden, not display:none — screen readers can still use it */
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .tbl-scroll table.tbl tbody tr {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface2);
+  }
+  .tbl-scroll table.tbl tbody tr:last-child { margin-bottom: 0; }
+  .tbl-scroll table.tbl td {
+    padding: 6px 0 !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .tbl-scroll table.tbl td:last-child { border-bottom: none; }
+  .tbl-scroll table.tbl td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 3px;
+  }
+}
+@media (max-width: 700px) {
+  .tbl th, .tbl td, .tbl-scroll th, .tbl-scroll td { padding: 6px 8px !important; }
+}
+
+/* ── ASCII-ART DIAGRAMS: same idea — shrink to fit before falling back to
+     the internal horizontal scroll, rather than staying a fixed 12px and
+     needing to scroll on every phone. A few of the widest diagrams will
+     still need a short scroll even at the smallest legible size — that's
+     inherent to preformatted ASCII alignment, not something font-size
+     alone can fully solve without breaking the art. ── */
+.diagram {
+  font-size: clamp(9px, 2.6vw, 12px);
+  padding: clamp(12px, 3.5vw, 24px);
+}
+
+/* ── AI CHAT ── */
+@media (max-width: 700px) {
+  #ai-chat-box { height: min(70vh, 560px); }
+  .ai-chat-sub { display: none; }
+  .quick-prompts { padding: 0 12px 10px; }
+  .ai-input-row { padding: 10px 12px; }
+}
+
+/* ── QUIZ MODE ── */
+@media (max-width: 700px) {
+  .flip-card { min-height: 260px; }
+  .flip-card-inner, .flip-face { min-height: 260px; }
+  .flip-face { padding: 18px; }
+  .flip-face-text { font-size: 13.5px; }
+  .quiz-toolbar { gap: 8px; }
+  .quiz-stat, .quiz-select { font-size: 10px; padding: 5px 8px; }
+}
+
+/* ── SAVED CARDS ── */
+@media (max-width: 480px) {
+  .saved-card { padding: 12px 14px; }
+}
+
+/* ── MISC SAFETY NETS ── */
+img, svg, video, iframe { max-width: 100%; }
+
+/* ── SAFE-AREA INSETS (status bar / notch / gesture nav bar) ──
+   Placed last on purpose: several rules above set `padding` as a shorthand
+   (which resets all four sides), so a longhand padding-top/-bottom earlier
+   in the file would get silently clobbered. Being last guarantees these win.
+
+   Android 15+ (targetSdk 35+, which this app builds against) enforces
+   edge-to-edge rendering at the OS level — the WebView draws behind the
+   status bar and gesture nav bar no matter what the native theme says.
+   The only reliable fix is to pad for it in CSS via env(safe-area-inset-*),
+   which the "viewport-fit=cover" meta tag (already set in <head>) unlocks.
+   Resolves to 0 harmlessly on desktop browsers/the plain website, so this
+   never affects non-native layout. */
+.topbar {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+.sidebar-header {
+  padding-top: max(24px, env(safe-area-inset-top));
+}
+.sidebar-footer {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+#askAiFab {
+  bottom: max(24px, calc(env(safe-area-inset-bottom) + 12px));
+}
+#updateBanner {
+  padding-bottom: max(14px, calc(env(safe-area-inset-bottom) + 8px));
+}
+
+/* ── SECTION PAGER (app.js renderSectionPager) ── */
+.section-pager {
+  display: flex; gap: 12px; justify-content: space-between;
+  margin: 40px 0 96px; /* bottom room so the floating ASK AI button never covers it */
+  padding-top: 20px; border-top: 1px solid var(--border);
+}
+.section-pager-btn {
+  display: flex; flex-direction: column; gap: 4px; flex: 1 1 0; min-width: 0; min-height: 48px;
+  padding: 12px 14px; border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface); color: var(--text); text-align: left; cursor: pointer; font: inherit;
+}
+.section-pager-btn:hover { border-color: var(--amber2); }
+.section-pager-next { text-align: right; margin-left: auto; }
+.section-pager-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--amber); }
+.section-pager-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  /* The pager carries prev/next on phones; the top bar keeps Menu, Back,
+     Home, Search, Settings and gets the room back for the module title. */
+  .topbar-controls { display: none !important; }
+  .topbar-section { max-width: none; }
+}

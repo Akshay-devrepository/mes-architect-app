@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- CSP: the app may only talk to itself, Groq (AI coach), Keygen (licenses), its own Pages site (update check) and Firebase Auth (accounts); the API origin is added by scripts/set-backend-config.js. No inline script at all: handlers are data-on* attributes run by assets/actions.js against an allowlist; no eval. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://api.keygen.sh https://akshay-devrepository.github.io https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://mes-architect-api.primeatnit.workers.dev; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script src="assets/diagnostics.js"></script>
+<script src="assets/actions.js"></script>
+<title>MES Architect — Concept Board & Interview Prep</title>
+<meta name="description" content="Interactive MES/ISA-95/ISA-88 concept board with bookmarks, flashcard quizzes, and an AI doubt-solving coach.">
+<meta name="theme-color" content="#060b14">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/enhance.css">
+<style>
+:root {
+  --bg: #060b14;
+  --surface: #0c1526;
+  --surface2: #111e35;
+  --border: #1c2d4a;
+  --border2: #243a5e;
+  --amber: #f59e0b;
+  --amber2: #d97706;
+  --amber-dim: rgba(245,158,11,0.12);
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.1);
+  --green: #10b981;
+  --red: #f43f5e;
+  --purple: #a78bfa;
+  --text: #e2e8f0;
+  --text-muted: #7588a3; /* WCAG AA (≥4.5:1) on every surface colour */
+  --text-dim: #94a3b8;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Sora', sans-serif;
+  --display: 'Chakra Petch', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.7;
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Grid texture overlay */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image: 
+    linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: 260px;
+  min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+.sidebar-header {
+  padding: 24px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo {
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.sidebar-title {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.sidebar-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  font-family: var(--mono);
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  margin: 12px 20px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber), var(--cyan));
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+.nav-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  padding: 12px 20px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.nav-item:hover { background: var(--amber-dim); color: var(--text); border-left-color: var(--amber2); }
+.nav-item.active { background: var(--amber-dim); color: var(--amber); border-left-color: var(--amber); font-weight: 600; }
+.nav-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--amber);
+  min-width: 20px;
+  opacity: 0.7;
+}
+.nav-item.active .nav-num { opacity: 1; }
+.nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  min-width: 6px;
+  margin-left: auto;
+  transition: background 0.2s;
+}
+.nav-item.done .nav-dot { background: var(--green); }
+.nav-item.active .nav-dot { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--amber-dim);
+  border: 1px solid var(--amber2);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1px;
+}
+
+/* ── MAIN CONTENT ── */
+#main {
+  margin-left: 260px;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  background: rgba(6,11,20,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 50;
+}
+.topbar-section {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--amber);
+  font-weight: 600;
+}
+.topbar-breadcrumb {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.topbar-controls { display: flex; gap: 8px; }
+.btn-sm {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+.btn-sm:hover { border-color: var(--amber); color: var(--amber); }
+.btn-sm.primary { background: var(--amber); color: #000; border-color: var(--amber); font-weight: 700; }
+.btn-sm.primary:hover { background: var(--amber2); }
+
+/* ── SECTIONS ── */
+.section { display: none; padding: 40px 40px 80px; max-width: 1100px; }
+.section.active { display: block; }
+
+.section-header {
+  margin-bottom: 36px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.section-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+.section-desc {
+  color: var(--text-dim);
+  font-size: 14px;
+  max-width: 700px;
+}
+
+/* ── ON-DEMAND MODULE TRANSLATION (via the same free Groq API as AI Coach) ── */
+.translate-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.translate-btn, .translate-revert-btn {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.translate-btn:hover, .translate-revert-btn:hover { border-color: var(--amber); color: var(--amber); }
+.translate-btn:disabled, .translate-lang-select:disabled { opacity: 0.6; cursor: not-allowed; }
+.translate-status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border2); }
+.card.amber { border-left: 3px solid var(--amber); }
+.card.cyan { border-left: 3px solid var(--cyan); }
+.card.green { border-left: 3px solid var(--green); }
+.card.purple { border-left: 3px solid var(--purple); }
+.card.red { border-left: 3px solid var(--red); }
+.card-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title.cyan { color: var(--cyan); }
+.card-title.green { color: var(--green); }
+.card-title.purple { color: var(--purple); }
+
+/* ── GRID ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+
+/* ── DIAGRAMS ── */
+.diagram {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 24px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 20px 0;
+  overflow-x: auto;
+  color: var(--text-dim);
+}
+.diagram .hl { color: var(--amber); font-weight: 600; }
+.diagram .hl2 { color: var(--cyan); }
+.diagram .hl3 { color: var(--green); }
+.diagram .hl4 { color: var(--purple); }
+.diagram .dim { color: var(--text-muted); opacity: 0.6; }
+
+/* ── TABLE ── */
+.tbl { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+.tbl th {
+  background: var(--surface2);
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border2);
+}
+.tbl td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  vertical-align: top;
+}
+.tbl tr:hover td { background: var(--amber-dim); color: var(--text); }
+
+/* ── CHIPS ── */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.chip {
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+.chip.amber { background: rgba(245,158,11,0.1); border-color: var(--amber2); color: var(--amber); }
+.chip.cyan { background: rgba(34,211,238,0.08); border-color: #0891b2; color: var(--cyan); }
+.chip.green { background: rgba(16,185,129,0.08); border-color: #059669; color: var(--green); }
+.chip.purple { background: rgba(167,139,250,0.08); border-color: #7c3aed; color: var(--purple); }
+.chip.red { background: rgba(244,63,94,0.08); border-color: #e11d48; color: var(--red); }
+
+/* ── ACCORDION ── */
+.accordion { margin: 12px 0; }
+.acc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: all 0.2s;
+}
+.acc-header:hover { border-color: var(--amber2); color: var(--text); }
+.acc-header.open { border-color: var(--amber); color: var(--amber); border-radius: 6px 6px 0 0; }
+.acc-arrow { font-size: 10px; transition: transform 0.3s; }
+.acc-header.open .acc-arrow { transform: rotate(180deg); }
+.acc-body {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--amber);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  padding: 16px;
+}
+.acc-body.open { display: block; }
+
+/* ── Q-BOX (Interview Q) ── */
+.q-box {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin: 8px 0;
+}
+.q-box .q-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.q-box .q-text { color: var(--text); font-size: 13px; }
+.q-box .a-text {
+  color: var(--text-dim);
+  font-size: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: none;
+}
+.q-box .a-text.show { display: block; }
+.q-toggle {
+  margin-top: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--cyan);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ── LEVEL PILLS ── */
+.level-row { display: flex; align-items: center; gap: 12px; margin: 10px 0; }
+.level-pill {
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.level-pill.beginner { background: rgba(16,185,129,0.15); color: var(--green); }
+.level-pill.intermediate { background: rgba(34,211,238,0.12); color: var(--cyan); }
+.level-pill.advanced { background: rgba(245,158,11,0.15); color: var(--amber); }
+.level-pill.architect { background: rgba(167,139,250,0.15); color: var(--purple); }
+
+/* ── AI CHAT ── */
+#ai-chat-box {
+  position: relative; /* anchors #aiChatSizeBtn to this box's own corner, not the header's flex flow */
+  display: flex;
+  flex-direction: column;
+  height: 520px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+#ai-chat-box.maximized {
+  position: fixed;
+  /* top/right/bottom/left + width/height:auto lets a fixed element's size
+     resolve against the real visible viewport — deliberately NOT
+     width:100vw/height:100vh, since mobile browser/WebView chrome (address
+     bar, nav buttons) makes 100vh taller than what's actually visible,
+     cutting the input row off below the fold on phones.
+     width/height:auto is also needed to explicitly override the base
+     #ai-chat-box rule's own explicit height (responsive.css sets one for
+     the non-maximized mobile size) — auto here beats it via the higher
+     .maximized specificity, where simply omitting the property would not.
+     top keeps a visible gap above the box (respecting notches/status bars
+     via safe-area-inset-top, same pattern as .topbar/.sidebar-header)
+     instead of running the box flush to the very top edge.
+  */
+  top: max(16px, env(safe-area-inset-top));
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  z-index: 500;
+  border-radius: 8px 8px 0 0;
+  border: none;
+}
+body.ai-chat-maximized { overflow: hidden; }
+html.ai-chat-maximized { overflow: hidden; }
+/* Absolutely positioned (not a flex child of .ai-chat-header) so it always
+   sits pinned to the exact top-right corner of the chat box — maximized or
+   not — regardless of how long the title/subtitle text runs. */
+#aiChatSizeBtn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#aiChatSizeBtn:hover { border-color: var(--amber); color: var(--amber); }
+
+/* ── MIND MAP ── */
+.mindmap-open-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mindmap-open-btn:hover { border-color: var(--amber); color: var(--amber); }
+.mindmap-modal {
+  display: none;
+  position: fixed;
+  /* inset with a real top margin instead of inset:0 — a full-bleed
+     overlay reads as "did this break" on first glance, and the same
+     flush-to-the-edge complaint already came up once for the AI chat
+     full-screen view. */
+  top: 28px; left: 0; right: 0; bottom: 0;
+  z-index: 600;
+  background: var(--bg);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mindmap-modal.open { display: flex; }
+body.mindmap-open { overflow: hidden; }
+.mindmap-modal-header {
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.mindmap-modal-title {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mindmap-modal-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mm-ctrl-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.mm-ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+.mm-close-btn:hover { border-color: var(--red); color: var(--red); }
+.mindmap-canvas {
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background:
+    linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.mindmap-canvas:active { cursor: grabbing; }
+#mmSvg { width: 100%; height: 100%; overflow: visible; }
+.mm-node rect { transition: stroke-width 0.15s; }
+.mm-node text { pointer-events: none; user-select: none; }
+
+.ai-chat-header {
+  padding: 14px 44px 14px 18px; /* right padding reserves room for the corner button so title/sub text never runs under it */
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.ai-chat-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ai-chat-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.ai-messages {
+  flex: 1;
+  /* Without this, a flex item's default min-height:auto lets it grow to
+     fit all its content instead of shrinking to the space actually
+     available — the classic reason an inner "overflow-y:auto" scroll
+     area silently stops scrolling and the outer box grows/overflows
+     instead once enough messages pile up. */
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ai-messages::-webkit-scrollbar { width: 4px; }
+.ai-messages::-webkit-scrollbar-track { background: transparent; }
+.ai-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.msg { max-width: 85%; }
+.msg.user { align-self: flex-end; }
+.msg.ai { align-self: flex-start; }
+.msg-bubble {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.msg.user .msg-bubble { background: var(--amber2); color: #000; font-weight: 500; border-radius: 8px 8px 2px 8px; }
+.msg.ai .msg-bubble { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); border-radius: 2px 8px 8px 8px; }
+.msg-label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-bottom: 3px; letter-spacing: 1px; }
+.ai-input-row {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  background: var(--surface2);
+}
+#ai-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+#ai-input:focus { border-color: var(--amber); }
+#ai-send {
+  padding: 8px 16px;
+  background: var(--amber);
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 1px;
+}
+#ai-send:hover { background: var(--amber2); }
+#ai-send:disabled { background: var(--border2); color: var(--text-muted); cursor: not-allowed; }
+.quick-prompts { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+.qp-btn {
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.qp-btn:hover { border-color: var(--amber); color: var(--amber); }
+.ai-level-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; white-space: normal; }
+.ai-level-note { align-self: center; font-family: var(--mono); font-size: 9px; letter-spacing: 1px; color: var(--text-muted); }
+.ai-level-change { background: none; border: none; padding: 0; margin-left: 4px; font: inherit; color: var(--amber); text-decoration: underline; cursor: pointer; }
+
+/* ── ROADMAP ── */
+.roadmap-phase {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+.roadmap-phase::before {
+  content: '';
+  position: absolute;
+  left: 19px; top: 40px; bottom: -20px;
+  width: 2px;
+  background: var(--border2);
+}
+.roadmap-phase:last-child::before { display: none; }
+.phase-num {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 2px solid var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--amber);
+  flex-shrink: 0;
+  z-index: 1;
+}
+.phase-content { flex: 1; }
+.phase-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+.phase-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+/* ── PURDUE MODEL ── */
+.purdue-layer {
+  display: flex;
+  align-items: stretch;
+  margin: 4px 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.purdue-num {
+  padding: 10px 14px;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+  min-width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.purdue-content {
+  padding: 10px 16px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.purdue-name { font-family: var(--display); font-size: 13px; font-weight: 600; }
+.purdue-desc { font-size: 12px; color: var(--text-dim); }
+.purdue-tech { font-family: var(--mono); font-size: 10px; }
+
+h2 { font-family: var(--display); font-size: 18px; font-weight: 600; color: var(--text); margin: 28px 0 12px; }
+h3 { font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--amber); margin: 20px 0 8px; }
+h4 { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--cyan); margin: 14px 0 6px; }
+p { color: var(--text-dim); margin-bottom: 10px; line-height: 1.8; }
+ul, ol { padding-left: 18px; color: var(--text-dim); }
+li { margin-bottom: 4px; line-height: 1.7; }
+strong { color: var(--text); }
+code {
+  font-family: var(--mono);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--amber);
+}
+
+/* Scrollbar */
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+#main::-webkit-scrollbar { width: 6px; }
+#main::-webkit-scrollbar-track { background: transparent; }
+#main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+.divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+.highlight-box {
+  background: var(--amber-dim);
+  border: 1px solid var(--amber2);
+  border-radius: 6px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.highlight-box.cyan { background: var(--cyan-dim); border-color: #0891b2; }
+.highlight-box .hb-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.highlight-box.cyan .hb-label { color: var(--cyan); }
+
+.typing-indicator {
+  display: flex; gap: 4px; padding: 8px 0;
+}
+.typing-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--amber);
+  animation: typingBounce 1.2s infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+
+/* ══════════════════════════════════════
+   DEEP DIVE EXPANDABLE COMPONENT
+══════════════════════════════════════ */
+.dd-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+  transition: border-color 0.25s;
+}
+.dd-wrap:hover { border-color: var(--border2); }
+.dd-wrap.open { border-color: var(--cyan); }
+
+.dd-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.dd-icon {
+  width: 36px; height: 36px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.dd-icon.amber { background: rgba(245,158,11,0.15); }
+.dd-icon.cyan  { background: rgba(34,211,238,0.12); }
+.dd-icon.green { background: rgba(16,185,129,0.12); }
+.dd-icon.purple{ background: rgba(167,139,250,0.12); }
+.dd-icon.red   { background: rgba(244,63,94,0.12); }
+
+.dd-meta { flex: 1; min-width: 0; }
+.dd-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.dd-label.amber { color: var(--amber); }
+.dd-label.cyan  { color: var(--cyan); }
+.dd-label.green { color: var(--green); }
+.dd-label.purple{ color: var(--purple); }
+.dd-label.red   { color: var(--red); }
+
+.dd-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+.dd-summary-text {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+}
+.dd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+.dd-tag {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+.dd-tag.amber { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); color: var(--amber); }
+.dd-tag.cyan  { background: rgba(34,211,238,0.06); border-color: rgba(34,211,238,0.3); color: var(--cyan); }
+.dd-tag.green { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.3); color: var(--green); }
+.dd-tag.purple{ background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.3); color: var(--purple); }
+
+.dd-btn-row {
+  padding: 0 20px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dd-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dd-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.dd-wrap.open .dd-btn { border-color: var(--cyan); color: var(--cyan); background: rgba(34,211,238,0.06); }
+.dd-btn-arrow {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  font-size: 11px;
+}
+.dd-wrap.open .dd-btn-arrow { transform: rotate(180deg); }
+
+.dd-read-time {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+}
+
+/* The expandable body */
+.dd-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.dd-wrap.open .dd-body { max-height: 6000px; }
+
+.dd-body-inner {
+  border-top: 1px solid var(--border);
+  background: rgba(34,211,238,0.02);
+  padding: 24px 24px 24px 24px;
+  position: relative;
+}
+.dd-body-inner::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--cyan), transparent);
+}
+
+/* Sub-sections inside deep dive */
+.dd-section {
+  margin-bottom: 24px;
+}
+.dd-section:last-child { margin-bottom: 0; }
+
+.dd-section-title {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dd-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border2), transparent);
+}
+
+.dd-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.dd-3col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+.dd-mini-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+.dd-mini-card-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--amber);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.dd-mini-card-title.cyan { color: var(--cyan); }
+.dd-mini-card-title.green { color: var(--green); }
+.dd-mini-card-title.purple { color: var(--purple); }
+
+.dd-step {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+  align-items: flex-start;
+}
+.dd-step-num {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: rgba(34,211,238,0.12);
+  border: 1px solid rgba(34,211,238,0.3);
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.dd-step-content { flex: 1; }
+.dd-step-title { font-family: var(--display); font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.dd-step-desc { font-size: 12px; color: var(--text-dim); line-height: 1.7; }
+
+.dd-warn {
+  background: rgba(244,63,94,0.07);
+  border: 1px solid rgba(244,63,94,0.25);
+  border-radius: 5px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.dd-warn-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--red);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.dd-tip {
+  background: rgba(16,185,129,0.06);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 5px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.dd-tip-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--green);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* deep-dive inside diagrams keep same mono style */
+.dd-body-inner pre { font-family: var(--mono); font-size: 11.5px; line-height: 1.8; color: var(--text-dim); }
+.dd-body-inner .hl  { color: var(--amber); font-weight: 600; }
+.dd-body-inner .hl2 { color: var(--cyan); }
+.dd-body-inner .hl3 { color: var(--green); }
+.dd-body-inner .hl4 { color: var(--purple); }
+.dd-body-inner .dim { color: var(--text-muted); opacity: 0.6; }
+
+/* ══════════════════════════════════════
+   MIND MAP COMPONENT
+══════════════════════════════════════ */
+.mindmap-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 24px;
+  margin: 20px 0 28px;
+}
+.mindmap-title {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.mindmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    "b1 topgap b2"
+    "b3 hub    b4"
+    "b5 botgap b6";
+  gap: 14px;
+  align-items: stretch;
+}
+.mm-topgap, .mm-botgap { display: none; }
+@media (min-width: 700px) { .mm-topgap, .mm-botgap { display: block; } }
+
+.mm-hub {
+  grid-area: hub;
+  background: linear-gradient(145deg, rgba(245,158,11,0.18), rgba(34,211,238,0.12));
+  border: 2px solid var(--amber);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+  text-align: center;
+  min-height: 120px;
+}
+.mm-hub-icon { font-size: 26px; margin-bottom: 6px; }
+.mm-hub-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1.3;
+}
+.mm-hub-sub {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.mm-branch {
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  position: relative;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.mm-branch:hover { transform: translateY(-2px); }
+.mm-branch-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.mm-branch-arrow {
+  font-size: 13px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.mm-branch-title {
+  font-family: var(--display);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.mm-branch-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mm-topic {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.03);
+  border-left: 2px solid;
+}
+
+.mm-b1 { grid-area: b1; border-left: 3px solid var(--amber); }
+.mm-b1 .mm-branch-title { color: var(--amber); }
+.mm-b1 .mm-topic { border-left-color: var(--amber); }
+
+.mm-b2 { grid-area: b2; border-left: 3px solid var(--cyan); }
+.mm-b2 .mm-branch-title { color: var(--cyan); }
+.mm-b2 .mm-topic { border-left-color: var(--cyan); }
+
+.mm-b3 { grid-area: b3; border-left: 3px solid var(--green); }
+.mm-b3 .mm-branch-title { color: var(--green); }
+.mm-b3 .mm-topic { border-left-color: var(--green); }
+
+.mm-b4 { grid-area: b4; border-left: 3px solid var(--purple); }
+.mm-b4 .mm-branch-title { color: var(--purple); }
+.mm-b4 .mm-topic { border-left-color: var(--purple); }
+
+.mm-b5 { grid-area: b5; border-left: 3px solid var(--red); }
+.mm-b5 .mm-branch-title { color: var(--red); }
+.mm-b5 .mm-topic { border-left-color: var(--red); }
+
+.mm-b6 { grid-area: b6; border-left: 3px solid #fb923c; }
+.mm-b6 .mm-branch-title { color: #fb923c; }
+.mm-b6 .mm-topic { border-left-color: #fb923c; }
+
+@media (max-width: 699px) {
+  .mindmap-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas: "hub" "b1" "b2" "b3" "b4" "b5" "b6";
+  }
+}
+
+/* ══ 8-BRANCH MIND MAP VARIANT (3x3, hub center) ══ */
+.mindmap-grid-8 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    "b1 b2 b3"
+    "b4 hub b5"
+    "b6 b7 b8";
+  gap: 14px;
+  align-items: stretch;
+}
+.mm-b7 { grid-area: b7; border-left: 3px solid #60a5fa; }
+.mm-b7 .mm-branch-title { color: #60a5fa; }
+.mm-b7 .mm-topic { border-left-color: #60a5fa; }
+.mm-b8 { grid-area: b8; border-left: 3px solid #f472b6; }
+.mm-b8 .mm-branch-title { color: #f472b6; }
+.mm-b8 .mm-topic { border-left-color: #f472b6; }
+
+@media (max-width: 699px) {
+  .mindmap-grid-8 {
+    grid-template-columns: 1fr;
+    grid-template-areas: "hub" "b1" "b2" "b3" "b4" "b5" "b6" "b7" "b8";
+  }
+}
+
+/* ══════════════════════════════════════
+   HIERARCHY TREE COMPONENT
+══════════════════════════════════════ */
+.htree-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+}
+.htree-root-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.htree-node {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.htree-node-icon { font-size: 14px; flex-shrink: 0; }
+.htree-node-label {
+  font-family: var(--display);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.htree-node-tag {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.htree-children {
+  margin-left: 20px;
+  border-left: 2px solid var(--border2);
+  padding-left: 16px;
+  margin-bottom: 4px;
+}
+.htree-node.lvl1 { border-color: var(--amber); border-left: 3px solid var(--amber); }
+.htree-node.lvl2 { border-color: var(--cyan); border-left: 3px solid var(--cyan); }
+.htree-node.lvl3 { border-color: var(--green); border-left: 3px solid var(--green); }
+.htree-node.lvl4 { border-color: var(--purple); border-left: 3px solid var(--purple); }
+.htree-node.lvl5 { border-color: #fb923c; border-left: 3px solid #fb923c; }
+
+/* ══════════════════════════════════════
+   FLOW TIMELINE COMPONENT
+══════════════════════════════════════ */
+.flow-timeline {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+}
+.flow-stage {
+  flex: 1;
+  min-width: 165px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.flow-stage-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.flow-stage-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.flow-stage-list {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.flow-stage-list li::before { content: '· '; color: var(--text-muted); }
+.flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  flex-shrink: 0;
+  color: var(--amber);
+  font-size: 18px;
+}
+.flow-stage.f1 { border-top: 3px solid var(--amber); }
+.flow-stage.f1 .flow-stage-label { color: var(--amber); }
+.flow-stage.f2 { border-top: 3px solid var(--cyan); }
+.flow-stage.f2 .flow-stage-label { color: var(--cyan); }
+.flow-stage.f3 { border-top: 3px solid var(--green); }
+.flow-stage.f3 .flow-stage-label { color: var(--green); }
+.flow-stage.f4 { border-top: 3px solid var(--purple); }
+.flow-stage.f4 .flow-stage-label { color: var(--purple); }
+
+@media (max-width: 699px) {
+  .flow-timeline { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); width: auto; height: 24px; }
+}
+
+/* ══════════════════════════════════════
+   MATURITY LADDER COMPONENT
+══════════════════════════════════════ */
+.ladder-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.ladder-step {
+  border-radius: 8px;
+  padding: 12px 18px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--border2);
+}
+.ladder-step-num {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 700;
+  width: 36px;
+  flex-shrink: 0;
+  text-align: center;
+}
+.ladder-step-content { flex: 1; }
+.ladder-step-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.ladder-step-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.ladder-step.l5 { background: rgba(167,139,250,0.08); border-color: var(--purple); margin-left: 0; }
+.ladder-step.l5 .ladder-step-num { color: var(--purple); }
+.ladder-step.l4 { background: rgba(245,158,11,0.08); border-color: var(--amber); margin-left: 24px; }
+.ladder-step.l4 .ladder-step-num { color: var(--amber); }
+.ladder-step.l3 { background: rgba(34,211,238,0.06); border-color: var(--cyan); margin-left: 48px; }
+.ladder-step.l3 .ladder-step-num { color: var(--cyan); }
+.ladder-step.l2 { background: rgba(16,185,129,0.06); border-color: var(--green); margin-left: 72px; }
+.ladder-step.l2 .ladder-step-num { color: var(--green); }
+.ladder-step.l1 { background: rgba(100,116,139,0.06); border-color: var(--text-muted); margin-left: 96px; }
+.ladder-step.l1 .ladder-step-num { color: var(--text-muted); }
+
+@media (max-width: 699px) {
+  .ladder-step.l1, .ladder-step.l2, .ladder-step.l3, .ladder-step.l4, .ladder-step.l5 { margin-left: 0; }
+}
+
+/* ══════════════════════════════════════
+   STAR BEHAVIORAL CARD COMPONENT
+══════════════════════════════════════ */
+.star-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.star-question {
+  font-family: var(--display);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.star-meta {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.star-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .star-grid { grid-template-columns: 1fr; }
+}
+.star-quad {
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.star-quad-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-weight: 700;
+}
+.star-quad.s { background: rgba(245,158,11,0.07); border-left: 3px solid var(--amber); }
+.star-quad.s .star-quad-label { color: var(--amber); }
+.star-quad.t { background: rgba(34,211,238,0.07); border-left: 3px solid var(--cyan); }
+.star-quad.t .star-quad-label { color: var(--cyan); }
+.star-quad.a { background: rgba(16,185,129,0.07); border-left: 3px solid var(--green); }
+.star-quad.a .star-quad-label { color: var(--green); }
+.star-quad.r { background: rgba(167,139,250,0.07); border-left: 3px solid var(--purple); }
+.star-quad.r .star-quad-label { color: var(--purple); }
+
+</style>
+<!-- Loaded after the inline styles above so its overrides win the cascade -->
+<link rel="stylesheet" href="assets/responsive.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- ══ SIDEBAR BACKDROP (mobile off-canvas menu) ══ -->
+<div id="sidebarBackdrop" data-onclick="closeSidebar()"></div>
+
+<!-- ══ FLOATING ASK-AI LAUNCHER — jumps to the AI Interview Coach module
+     (Module 16, a paid module); shows the license gate there if not
+     unlocked, same as navigating to it directly. ══ -->
+<button id="askAiFab" data-onclick="askAiAboutCurrentSection()" title="Ask AI about this topic">
+  <span id="askAiFabIcon">◈</span> ASK AI
+</button>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">▲ MES Architect</div>
+    <div class="sidebar-title">Concept Board &<br>Interview Prep</div>
+    <div class="sidebar-sub">// 16 Modules · Enterprise Level</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+  <div class="nav-item nav-item-home active" data-onclick="goHome()">⌂ Home</div>
+
+  <div class="nav-section-label">Start Here</div>
+  <div class="nav-item" data-idx="0" data-onclick="showSection(0)"><span class="nav-num">01</span> Learning Roadmap<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">Core Framework</div>
+  <div class="nav-item" data-idx="1" data-onclick="showSection(1)"><span class="nav-num">02</span> MES Industry Overview<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="2" data-onclick="showSection(2)"><span class="nav-num">03</span> ISA-95 Deep Dive<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="3" data-onclick="showSection(3)"><span class="nav-num">04</span> ISA-88 Batch Control<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="4" data-onclick="showSection(4)"><span class="nav-num">05</span> MES Functional Modules<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">Industry & Visualization</div>
+  <div class="nav-item" data-idx="5" data-onclick="showSection(5)"><span class="nav-num">06</span> Industry-Specific MES<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="6" data-onclick="showSection(6)"><span class="nav-num">07</span> Concept Visualizations<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">Architecture</div>
+  <div class="nav-item" data-idx="7" data-onclick="showSection(7)"><span class="nav-num">08</span> Enterprise Architecture<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="8" data-onclick="showSection(8)"><span class="nav-num">09</span> Cloud Migration<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="9" data-onclick="showSection(9)"><span class="nav-num">10</span> Database & Data Models<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">★ Integration Hub</div>
+  <div class="nav-item" data-idx="10" data-onclick="showSection(10)" style="border-left:3px solid rgba(34,211,238,0.3);"><span class="nav-num" style="color:var(--cyan);">11</span> <span style="color:var(--cyan);font-weight:600;">MES Integration Deep Dive</span><span class="nav-dot" style="background:var(--cyan);box-shadow:0 0 6px var(--cyan);"></span></div>
+
+  <div class="nav-section-label">Advanced</div>
+  <div class="nav-item" data-idx="11" data-onclick="showSection(11)"><span class="nav-num">12</span> Advanced Topics (UNS/AI)<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">★ AI Deep Dive</div>
+  <div class="nav-item" data-idx="12" data-onclick="showSection(12)" style="border-left:3px solid rgba(167,139,250,0.3);"><span class="nav-num" style="color:var(--purple);">13</span> <span style="color:var(--purple);font-weight:600;">AI in Manufacturing</span><span class="nav-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple);"></span></div>
+
+  <div class="nav-section-label">Consulting</div>
+  <div class="nav-item" data-idx="13" data-onclick="showSection(13)"><span class="nav-num">14</span> Implementation Lifecycle<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="14" data-onclick="showSection(14)"><span class="nav-num">15</span> Consultant Mindset<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">Interview Ready</div>
+  <div class="nav-item" data-idx="15" data-onclick="showSection(15)"><span class="nav-num">16</span> AI Interview Coach<span class="nav-dot"></span></div>
+
+  <div class="nav-section-label">Practice</div>
+  <div class="nav-item" data-idx="16" data-onclick="showSection(16)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">17</span> Mock Interview &amp; Quiz<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="18" data-onclick="showSection(18)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">19</span> 📖 Glossary<span class="nav-dot"></span></div>
+  <div class="nav-item" data-idx="17" data-onclick="showSection(17)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">18</span> ★ Saved<span class="nav-dot" id="savedCountDot" style="background:transparent;width:auto;height:auto;border-radius:0;font-family:var(--mono);font-size:9px;color:var(--amber);"></span></div>
+  <div class="nav-item" data-idx="19" data-onclick="showSection(19)" style="border-left:3px solid rgba(245,158,11,0.3);"><span class="nav-num">20</span> 📊 Progress<span class="nav-dot"></span></div>
+
+  <div class="sidebar-footer" id="sidebarFooter">
+    <div class="level-badge">▲ ARCHITECT TRACK</div>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main id="main" tabindex="-1">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <button id="menuToggleBtn" data-onclick="toggleSidebar()" title="Toggle menu" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+      <button id="backBtn" class="nav-icon-btn" data-onclick="goBack()" title="Back" aria-label="Back">←</button>
+      <button id="homeBtn" class="nav-icon-btn" data-onclick="goHome()" title="Home" aria-label="Home">⌂</button>
+      <div>
+        <div class="topbar-breadcrumb">MES CONCEPT BOARD</div>
+        <div class="topbar-section" id="topbarTitle">Home</div>
+      </div>
+    </div>
+    <div class="topbar-right-icons">
+      <button id="searchToggleBtn" class="nav-icon-btn" data-onclick="openSearchPanel()" title="Search" aria-label="Search">🔍</button>
+      <button id="settingsToggleBtn" class="nav-icon-btn" data-onclick="openSettingsPanel()" title="Settings" aria-label="Settings">⚙️</button>
+    </div>
+    <div class="topbar-controls" id="topbarSectionControls" style="display:none">
+      <button class="btn-sm" data-onclick="prevSection()">← <span class="btn-label">PREV</span></button>
+      <button class="btn-sm" data-onclick="nextSection()"><span class="btn-label">NEXT</span> →</button>
+    </div>
+  </div>
+
+  <!-- ══ GLOBAL SEARCH OVERLAY — not tied to any module, searches whatever
+       concept/question content is currently in the DOM (so it naturally
+       only covers unlocked modules) plus the Glossary. ══ -->
+  <div id="searchBackdrop" data-onclick="closeSearchPanel()"></div>
+  <div id="searchPanel">
+    <div class="search-panel-header">
+      <input type="text" id="searchInput" aria-label="Search" placeholder="Search concepts, questions, glossary…" autocomplete="off">
+      <button id="searchCloseBtn" data-onclick="closeSearchPanel()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div id="searchCoverage" class="search-coverage"></div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
+
+  <!-- ══ FEEDBACK / REPORT ISSUE MODAL — no backend, so "sending" just
+       opens the user's own email app with a pre-filled draft addressed
+       to the app owner. ══ -->
+  <div id="feedbackBackdrop" data-onclick="closeFeedbackModal()"></div>
+  <div id="feedbackPanel">
+    <div class="feedback-panel-header">
+      <div class="feedback-panel-title">💬 Feedback / Report an Issue</div>
+      <button id="feedbackCloseBtn" data-onclick="closeFeedbackModal()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="feedback-panel-body">
+      <label class="feedback-field-label" for="feedbackType">Type</label>
+      <select class="quiz-select feedback-type-select" id="feedbackType">
+        <option value="Bug report">🐞 Bug report</option>
+        <option value="Feature idea">💡 Feature idea</option>
+        <option value="General feedback">💬 General feedback</option>
+        <option value="Purchase inquiry">💳 Purchase inquiry</option>
+      </select>
+      <label class="feedback-field-label" for="feedbackText">Details</label>
+      <textarea id="feedbackText" class="feedback-textarea" placeholder="What happened, or what would you like to see?" rows="6"></textarea>
+      <div id="feedbackError" class="feedback-error" style="display:none">Add a few details before sending.</div>
+      <div class="feedback-context-note">Your app version, current screen and any recent error messages from this device are added to the email so you can see them before sending.</div>
+    </div>
+    <div class="feedback-panel-actions">
+      <button id="feedbackCancelBtn" class="feedback-cancel-btn" data-onclick="closeFeedbackModal()">Cancel</button>
+      <button id="feedbackSendBtn" class="feedback-send-btn" data-onclick="sendFeedback()">Send via Email →</button>
+    </div>
+  </div>
+
+  <!-- ══ SETTINGS PANEL — one place for text size, feedback, and update
+       checks, instead of separate standalone controls scattered across
+       the topbar/sidebar. ══ -->
+  <div id="settingsBackdrop" data-onclick="closeSettingsPanel()"></div>
+  <div id="settingsPanel">
+    <div class="settings-panel-header">
+      <div class="settings-panel-title">⚙️ Settings</div>
+      <button id="settingsCloseBtn" data-onclick="closeSettingsPanel()" title="Close" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-panel-body">
+      <div class="settings-section">
+        <div class="settings-section-label">Text Size</div>
+        <div class="text-size-row">
+          <button id="textSizeDecBtn" class="text-size-btn" data-onclick="decreaseTextSize()" title="Decrease text size" aria-label="A− decrease text size">A−</button>
+          <span id="textSizeDisplay" class="text-size-display">100%</span>
+          <button id="textSizeIncBtn" class="text-size-btn" data-onclick="increaseTextSize()" title="Increase text size" aria-label="A+ increase text size">A+</button>
+          <span id="textSizeResetBtn" class="text-size-reset" data-onclick="resetTextSize()">Reset</span>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-label">Feedback</div>
+        <div class="settings-link" data-onclick="closeSettingsPanel(); openFeedbackModal();">💬 Feedback / Report an issue</div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-label">Privacy</div>
+        <a class="settings-link" href="privacy.html">🔒 Privacy policy</a>
+      </div>
+      <div class="settings-section" id="settingsUpdateSection" style="display:none">
+        <div class="settings-section-label">App Updates</div>
+        <div id="settingsUpdateMount"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EXIT CONFIRMATION — shown by the hardware back button handler
+       (see initHardwareBackButton below) only once in-app back navigation
+       is exhausted, instead of exiting immediately. Native app only. ══ -->
+  <div id="exitConfirmBackdrop" data-onclick="closeExitConfirm()"></div>
+  <div id="exitConfirmDialog">
+    <div class="exit-confirm-title">Exit MES Architect?</div>
+    <div class="exit-confirm-actions">
+      <button class="exit-confirm-cancel" data-onclick="closeExitConfirm()">Cancel</button>
+      <button class="exit-confirm-exit" data-onclick="confirmExitApp()">Exit</button>
+    </div>
+  </div>
+
+<!-- ══════════════════════════════════════════
+     HOME — module picker
+══════════════════════════════════════════ -->
+<div class="section active" id="sec-home">
+  <div class="section-header">
+    <div class="section-tag">// MES ARCHITECT · CONCEPT BOARD</div>
+    <div class="section-title">Choose a Module</div>
+    <div class="section-desc">16 modules covering ISA-95, ISA-88, enterprise architecture, cloud, AI, and interview coaching — plus a mock interview &amp; quiz mode. Tap any card to jump in — your place is saved as you go.</div>
+  </div>
+  <div id="continueCard"></div>
+  <div id="homeStats"></div>
+  <div class="home-grid" id="homeGrid"></div>
+</div><!-- end sec-home -->
+
+<!-- ══════════════════════════════════════════
+     SECTION 1: MES INDUSTRY OVERVIEW
+══════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════
+     SECTION 0: LEARNING ROADMAP TO MES ARCHITECT
+══════════════════════════════════════════ -->
+<div class="section" id="sec-0">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 01 · ROADMAP</div>
+    <div class="section-title">Learning Roadmap to MES Architect</div>
+    <div class="section-desc">30-day, 90-day, and 6-month structured learning paths with daily study plans, hands-on projects, and mock interview milestones.</div>
+  </div>
+
+  <h2>30-Day Sprint — Foundation & Interview Prep</h2>
+  <table class="tbl">
+    <thead><tr><th>Week</th><th>Focus</th><th>Daily Activities</th><th>Milestone</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Week 1</strong></td>
+        <td>ISA-95 & ISA-88 Mastery</td>
+        <td>Read ISA-95 Part 1-2, map equipment hierarchy for your current plant, practice explaining to a non-technical colleague</td>
+        <td>Can whiteboard ISA-95 levels and object models in 10 min</td>
+      </tr>
+      <tr>
+        <td><strong>Week 2</strong></td>
+        <td>Enterprise Architecture</td>
+        <td>Draw the IT/OT stack for 3 industries (pharma, auto, F&B), learn OPC-UA vs MQTT, study integration patterns</td>
+        <td>Can design a multi-site MES architecture on a whiteboard</td>
+      </tr>
+      <tr>
+        <td><strong>Week 3</strong></td>
+        <td>Cloud & Migration</td>
+        <td>Azure fundamentals (AZ-900 or equivalent), study IoT Hub, Event Hub, AKS basics, draw cloud MES architecture</td>
+        <td>Can explain cloud MES migration strategy with trade-offs</td>
+      </tr>
+      <tr>
+        <td><strong>Week 4</strong></td>
+        <td>Mock Interviews</td>
+        <td>Daily 30-min mock with AI coach, STAR format responses, executive communication practice, technical Q&A</td>
+        <td>Confident in all three interview modes: technical, scenario, behavioural</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>90-Day Plan — Architect-Level Depth</h2>
+  <div class="grid-3">
+    <div class="card amber">
+      <div class="card-title">Month 1 — Core Concepts</div>
+      <ul>
+        <li>ISA-95 Parts 1-5 in depth</li>
+        <li>ISA-88 batch execution mastery</li>
+        <li>All MES modules end-to-end</li>
+        <li>Hands-on: Ignition free trial — configure OEE dashboard</li>
+        <li>Project: Draw full ISA-95 hierarchy for your industry</li>
+      </ul>
+    </div>
+    <div class="card cyan">
+      <div class="card-title cyan">Month 2 — Architecture</div>
+      <ul>
+        <li>Cloud platforms: Azure IoT/AWS IoT</li>
+        <li>MQTT + Sparkplug B protocol lab</li>
+        <li>OPC-UA simulator setup</li>
+        <li>Node-RED flow for OT data collection</li>
+        <li>Docker + K8s basics (Kubernetes playground)</li>
+        <li>Project: Design cloud MES architecture for a mid-sized plant</li>
+      </ul>
+    </div>
+    <div class="card green">
+      <div class="card-title green">Month 3 — Consulting Skills</div>
+      <ul>
+        <li>Read: "The Trusted Advisor" by Maister</li>
+        <li>Practice workshop facilitation techniques</li>
+        <li>Executive presentation preparation</li>
+        <li>20+ mock interviews with AI coach</li>
+        <li>Project: Full MES business case for a hypothetical client</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>6-Month Plan — Complete MES Architect</h2>
+  <div class="roadmap-phase">
+    <div class="phase-num">1-2</div>
+    <div class="phase-content">
+      <div class="phase-title">Months 1-2: Standards & Fundamentals</div>
+      <p>ISA-95, ISA-88, MES modules, industry-specific knowledge. Build your personal reference architecture library.</p>
+    </div>
+  </div>
+  <div class="roadmap-phase">
+    <div class="phase-num">3-4</div>
+    <div class="phase-content">
+      <div class="phase-title">Months 3-4: Architecture & Technology</div>
+      <p>Cloud platforms, edge computing, integration patterns, UNS/MQTT. Get Azure IoT Developer or AWS IoT certified. Build a home lab with Ignition Edge + Node-RED + MQTT.</p>
+    </div>
+  </div>
+  <div class="roadmap-phase">
+    <div class="phase-num">5</div>
+    <div class="phase-content">
+      <div class="phase-title">Month 5: Consulting & Business</div>
+      <p>Business case development, ROI modeling, workshop facilitation, executive communication, proposal writing. Shadow or participate in a real client discovery call if possible.</p>
+    </div>
+  </div>
+  <div class="roadmap-phase" style="margin-bottom: 0;">
+    <div class="phase-num">6</div>
+    <div class="phase-content">
+      <div class="phase-title">Month 6: Interview Ready</div>
+      <p>Weekly mock interviews, portfolio of case studies and architecture artifacts, Certified Manufacturing Engineer (CMfgE) or CPIM certification pursuit, LinkedIn profile with thought leadership content.</p>
+    </div>
+  </div>
+
+  <h2>Recommended Resources</h2>
+  <div class="grid-2">
+    <div class="card amber">
+      <div class="card-title">📚 Essential Books</div>
+      <ul>
+        <li><strong>"ISA-95 Best Practices Book 1.0"</strong> — MESA International</li>
+        <li><strong>"The MES Guide for Executives"</strong> — MESA International</li>
+        <li><strong>"Industry 4.0"</strong> — Lasi, Fettke, Feld</li>
+        <li><strong>"The Art of Scalability"</strong> — Abbott & Fisher (for architecture)</li>
+        <li><strong>"The Trusted Advisor"</strong> — Maister (consulting mindset)</li>
+        <li><strong>"Designing Data-Intensive Applications"</strong> — Kleppmann</li>
+      </ul>
+    </div>
+    <div class="card cyan">
+      <div class="card-title cyan">🎓 Certifications</div>
+      <ul>
+        <li><strong>MESA MES/MOM Certification</strong> — Gold standard for MES professionals</li>
+        <li><strong>CPIM (APICS)</strong> — Production & Inventory Management</li>
+        <li><strong>Azure IoT Developer (AZ-220)</strong> — For cloud MES architects</li>
+        <li><strong>AWS IoT Specialty</strong> — Alternative cloud path</li>
+        <li><strong>ISA Certified Automation Professional (CAP)</strong> — Broad OT/IT scope</li>
+        <li><strong>Six Sigma Green Belt</strong> — Manufacturing quality fundamentals</li>
+      </ul>
+    </div>
+    <div class="card purple">
+      <div class="card-title purple">🛠️ Open Source Tools to Practice</div>
+      <ul>
+        <li><strong>Ignition (free dev license)</strong> — Industry SCADA/MES platform</li>
+        <li><strong>Node-RED</strong> — OT/IT integration flows</li>
+        <li><strong>HiveMQ/EMQX</strong> — MQTT broker for UNS labs</li>
+        <li><strong>Unified Automation UaExpert</strong> — OPC-UA client/server</li>
+        <li><strong>InfluxDB + Grafana</strong> — Time-series data + dashboards</li>
+        <li><strong>Apache Kafka (Confluent free)</strong> — Event streaming</li>
+      </ul>
+    </div>
+    <div class="card green">
+      <div class="card-title green">🎥 Learning Channels</div>
+      <ul>
+        <li><strong>MESA International</strong> — Webinars, white papers</li>
+        <li><strong>Inductive Automation</strong> — Ignition tutorials, ICC talks</li>
+        <li><strong>Walker Reynolds (4.0 Solutions)</strong> — UNS/MQTT mastery</li>
+        <li><strong>The Automation Blog</strong> — Industrial automation deep dives</li>
+        <li><strong>Smart Industry</strong> — Industry 4.0 case studies</li>
+        <li><strong>Towards Data Science</strong> — Manufacturing ML applications</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 1: MES INDUSTRY OVERVIEW
+══════════════════════════════════════════ -->
+<div class="section" id="sec-1">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 02 · FOUNDATIONAL</div>
+    <div class="section-title">MES Industry Overview</div>
+    <div class="section-desc">From first principles to enterprise positioning. Understand what MES is, why it exists, and where it fits in the modern manufacturing landscape.</div>
+  </div><div class="locked-gate" data-module="1"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 2: ISA-95 — COMPLETE BREAKDOWN
+══════════════════════════════════════════ -->
+<div class="section" id="sec-2">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 03 · STANDARDS</div>
+    <div class="section-title">ISA-95 — Complete Breakdown</div>
+    <div class="section-desc">The global standard for Enterprise-Control integration. Master the models, levels, objects, and integration patterns that underpin every enterprise MES conversation.</div>
+  </div><div class="locked-gate" data-module="2"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 3: ISA-88 — BATCH CONTROL STANDARD
+══════════════════════════════════════════ -->
+<div class="section" id="sec-3">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 04 · BATCH STANDARD</div>
+    <div class="section-title">ISA-88 — Batch Control Standard</div>
+    <div class="section-desc">The definitive standard for batch process control. Master the physical model, procedural model, recipe hierarchy, and batch execution workflow used across Pharma, F&B, and Chemical manufacturing.</div>
+  </div><div class="locked-gate" data-module="3"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 4: MES FUNCTIONAL ARCHITECTURE
+══════════════════════════════════════════ -->
+<div class="section" id="sec-4">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 05 · FUNCTIONAL</div>
+    <div class="section-title">MES Functional Architecture</div>
+    <div class="section-desc">All 15+ MES modules explained at consultant depth — purpose, workflow, data, integration points, and interview-ready answers.</div>
+  </div><div class="locked-gate" data-module="4"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 5: INDUSTRY-SPECIFIC MES
+══════════════════════════════════════════ -->
+<div class="section" id="sec-5">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 06 · INDUSTRIES</div>
+    <div class="section-title">Industry-Specific MES</div>
+    <div class="section-desc">Architect-level depth across the five industries where MES consultants most often work — Pharmaceutical, Automotive, Food &amp; Beverage, Semiconductor, and Chemical/Process — with the workflows, standards, and technical patterns unique to each.</div>
+  </div><div class="locked-gate" data-module="5"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 6: CONCEPT VISUALIZATIONS
+══════════════════════════════════════════ -->
+<div class="section" id="sec-6">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 07 · VISUAL MASTERY</div>
+    <div class="section-title">Concept Visualizations</div>
+    <div class="section-desc">The complete visual knowledge map — a master concept map of everything covered in this board, plus detailed visual hierarchies, architecture maps, and journey diagrams for the concepts that matter most in client and interview conversations.</div>
+  </div><div class="locked-gate" data-module="6"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 7: MES ENTERPRISE ARCHITECTURE
+══════════════════════════════════════════ -->
+<div class="section" id="sec-7">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 08 · ARCHITECTURE</div>
+    <div class="section-title">MES Enterprise Architecture</div>
+    <div class="section-desc">Cloud-native, hybrid, and multi-site MES architectures. Event-driven integration, edge computing, high availability, and the full technology stack from OT to cloud.</div>
+  </div><div class="locked-gate" data-module="7"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 8: ON-PREM TO CLOUD MES MIGRATION
+══════════════════════════════════════════ -->
+<div class="section" id="sec-8">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 09 · MODERNIZATION</div>
+    <div class="section-title">On-Prem to Cloud MES Migration</div>
+    <div class="section-desc">Complete architect-level treatment of cloud MES migration — readiness assessment, the 6R strategy framework, platform decisions, zero-downtime data migration, GxP re-validation, and cutover execution.</div>
+  </div><div class="locked-gate" data-module="8"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 9: MES DATABASE & DATA MODELING
+══════════════════════════════════════════ -->
+<div class="section" id="sec-9">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 10 · DATA</div>
+    <div class="section-title">MES Database & Data Modeling</div>
+    <div class="section-desc">Deep architect-level treatment of MES data architecture — polyglot persistence strategy, ISA-95/88 aligned entity models, compliance schemas, time-series patterns, and performance at scale.</div>
+  </div><div class="locked-gate" data-module="9"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 10: MES INTEGRATION DEEP DIVE
+══════════════════════════════════════════ -->
+<div class="section" id="sec-10">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 11 · INTEGRATION HUB · ARCHITECT-LEVEL</div>
+    <div class="section-title">MES Integration Deep Dive</div>
+    <div class="section-desc">The complete integration knowledge base — every system MES connects to, how to do it right, what to check at every stage, common failure modes, and step-by-step guides for ERP, SCADA, LIMS, Historian, CMMS, and WMS.</div>
+  </div><div class="locked-gate" data-module="10"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 11: ADVANCED TOPICS — UNS, AI, DIGITAL TWIN
+══════════════════════════════════════════ -->
+<div class="section" id="sec-11">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 12 · ADVANCED</div>
+    <div class="section-title">Advanced Topics — UNS, AI, Digital Twin</div>
+    <div class="section-desc">The cutting edge of manufacturing technology, in architect-level depth — Unified Namespace, MQTT Sparkplug B, AI and GenAI in MES, Digital Twin architecture, and the Manufacturing Data Fabric that ties it all together.</div>
+  </div><div class="locked-gate" data-module="11"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 12: AI IN MANUFACTURING
+══════════════════════════════════════════ -->
+<div class="section" id="sec-12">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 13 · AI DEEP DIVE · ARCHITECT LEVEL</div>
+    <div class="section-title">AI in Manufacturing</div>
+    <div class="section-desc">The complete landscape of AI applications in manufacturing operations — every major use case mapped, with architect-level deep dives covering implementation approach, data model, and integration pattern for each. Built in phases; this release covers the full landscape plus Phase 1: Quality &amp; Inspection AI.</div>
+  </div><div class="locked-gate" data-module="12"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 13: MES IMPLEMENTATION LIFECYCLE
+══════════════════════════════════════════ -->
+<div class="section" id="sec-13">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 14 · DELIVERY</div>
+    <div class="section-title">MES Implementation Lifecycle</div>
+    <div class="section-desc">The complete architect-level delivery methodology — from discovery workshops through hypercare, with the validation mechanics, training programs, and cutover discipline that separate a smooth go-live from a chaotic one.</div>
+  </div><div class="locked-gate" data-module="13"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 14: THE CONSULTANT MINDSET
+══════════════════════════════════════════ -->
+<div class="section" id="sec-14">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 15 · MINDSET</div>
+    <div class="section-title">The Consultant Mindset</div>
+    <div class="section-desc">The human craft of MES consulting — problem framing, stakeholder communication, workshop facilitation, objection handling, executive business cases, and the trusted advisor model. The skills that separate a technical expert from a trusted consultant.</div>
+  </div><div class="locked-gate" data-module="14"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 15: AI INTERVIEW COACH
+══════════════════════════════════════════ -->
+<div class="section" id="sec-15">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 16 · AI POWERED</div>
+    <div class="section-title">AI Interview Coach</div>
+    <div class="section-desc">Your personal MES Consultant interview coach. Practice scenarios, get feedback, explore architecture questions, and build executive communication skills.</div>
+  </div><div class="locked-gate" data-module="15"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 16: MOCK INTERVIEW & QUIZ MODE
+══════════════════════════════════════════ -->
+<div class="section" id="sec-16">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 17 · MOCK INTERVIEW &amp; PRACTICE</div>
+    <div class="section-title">Mock Interview &amp; Quiz Mode</div>
+    <div class="section-desc">Practice mode turns every "Show Consultant Answer" question into a flip-card deck — rate yourself after each card and missed cards resurface sooner. Mock Interview mode runs a timed, one-question-at-a-time session by track, with no peeking until you reveal.</div>
+  </div><div class="locked-gate" data-module="16"><div class="locked-icon">🔒</div><div class="locked-title">This module is part of the paid content</div><div class="locked-desc">Enter your license key to unlock it on this device. One bundle key unlocks every module; an individual key unlocks just this one.</div><div class="locked-input-row"><input type="text" class="locked-key-input" placeholder="Paste your license key" autocomplete="off" autocapitalize="off" spellcheck="false"><button class="locked-unlock-btn" data-onclick="tryUnlockGate(this)">Unlock</button></div><div class="locked-error" style="display:none">That key didn’t unlock this module — check for typos.</div></div><div class="unlocked-content" style="display:none"></div></div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 17: ★ SAVED
+══════════════════════════════════════════ -->
+<div class="section" id="sec-17">
+  <div class="section-header">
+    <div class="section-tag">// MODULE 18 · YOUR LIBRARY</div>
+    <div class="section-title">★ Saved</div>
+    <div class="section-desc">Concepts and questions you starred while reading. Click any card to jump straight back to it in context.</div>
+  </div>
+  <div id="saved-root"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 18: 📖 GLOSSARY
+══════════════════════════════════════════ -->
+<div class="section" id="sec-18">
+  <div class="section-header">
+    <div class="section-tag">// REFERENCE · QUICK LOOKUP</div>
+    <div class="section-title">📖 Glossary</div>
+    <div class="section-desc">Every acronym and term used across the board, in one searchable place — handy for a last-minute refresher before an interview.</div>
+  </div>
+  <input type="text" id="glossarySearch" aria-label="Filter glossary" class="glossary-search" placeholder="Search terms or definitions… (e.g. &quot;OEE&quot;, &quot;traceability&quot;)" autocomplete="off">
+  <div id="glossary-root"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SECTION 19: 📊 PROGRESS DASHBOARD
+══════════════════════════════════════════ -->
+<div class="section" id="sec-19">
+  <div class="section-header">
+    <div class="section-tag">// YOUR PROGRESS</div>
+    <div class="section-title">📊 Progress Dashboard</div>
+    <div class="section-desc">Modules visited, quiz mastery, and which modules' cards keep coming back as "still fuzzy" — a hint at what's worth another pass before an interview.</div>
+  </div>
+  <div id="progress-root"></div>
+</div>
+<!-- end sec-19 -->
+
+</main><!-- end #main -->
+
+<script src="assets/app.js"></script>
+<script src="assets/a11y.js"></script>
+<!-- Vendored (no bundler in this project): @capacitor/core + @capacitor/app's
+     browser builds, copied verbatim from node_modules. On the native Android
+     app, window.Capacitor already exists (auto-injected by the native bridge
+     before this script runs) and this setup call extends that same object
+     instead of replacing it, so each plugin correctly binds to its real
+     native implementation (hardware back button, exitApp). On a plain
+     website/PWA, no native bridge exists yet, so this creates a "web"
+     platform Capacitor object instead — isNativePlatform() reports false
+     there, which the back-button handler uses to fall back to browser-
+     appropriate behavior. Re-copy these files from node_modules if the
+     packages are ever upgraded. -->
+<script src="assets/vendor/capacitor.js"></script>
+<script src="assets/vendor/capacitor-app.js"></script>
+<script src="assets/quiz-data.js"></script>
+<script src="assets/glossary-data.js"></script>
+<script src="assets/module-preview-data.js"></script>
+<script src="assets/mindmap-data.js"></script>
+<script src="assets/mindmap.js"></script>
+<script src="assets/enhance.js"></script>
+<script src="assets/purchase-links.js"></script>
+<script src="assets/license.js"></script>
+<script src="assets/backend-config.js"></script>
+<script src="assets/account.js"></script>
+<!-- Only the ~10 KB hashes-only manifest loads up front; each full
+     translations/<lang>.js (up to ~4.5 MB) is fetched on demand by
+     translate.js the first time that language is picked. -->
+<script src="assets/translations-manifest.js"></script>
+<script src="assets/translate.js"></script>
+<script src="assets/build-version.js"></script>
+<script src="assets/update-check.js"></script>
+<script src="assets/sw-register.js"></script>
+</body>
+</html>
