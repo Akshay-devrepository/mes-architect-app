@@ -1,0 +1,47 @@
+/* Shared look for the policy pages (privacy, terms, refund, delivery, contact). */
+:root {
+  --bg: #060b14;
+  --surface: #0c1526;
+  --surface2: #111e35;
+  --border: #1c2d4a;
+  --border2: #243a5e;
+  --amber: #f59e0b;
+  --amber2: #d97706;
+  --amber-dim: rgba(245,158,11,0.12);
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.1);
+  --green: #10b981;
+  --text: #e2e8f0;
+  --text-muted: #7588a3; /* WCAG AA (≥4.5:1) on every surface colour */
+  --text-dim: #94a3b8;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Sora', sans-serif;
+  --display: 'Chakra Petch', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+h1, h2 { font-family: var(--display); font-weight: 600; }
+h1 { font-size: 28px; margin-bottom: 4px; }
+h2 { font-size: 18px; margin: 28px 0 8px; color: var(--amber); }
+p, li { color: var(--text-dim); }
+p + p { margin-top: 8px; }
+ul { padding-left: 20px; margin-top: 6px; }
+li { margin: 4px 0; }
+strong { color: var(--text); }
+.meta { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+a { color: var(--cyan); }
+.back { display: inline-block; margin-bottom: 20px; font-family: var(--mono); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+th { color: var(--text); font-weight: 600; }
+.table-scroll { overflow-x: auto; }
+code { font-family: var(--mono); font-size: 13px; color: var(--text); }
+.legal-nav { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 12px; }
+.legal-nav a { color: var(--text-dim); }
+.legal-nav a[aria-current="page"] { color: var(--amber); text-decoration: none; }
+.legal-owner { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 10px; }
+.card p { margin: 0; }
+
