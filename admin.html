@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<!-- The admin API only answers verified accounts listed in ADMIN_EMAILS
+     (backend/wrangler.toml); this page is just a client for it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://mes-architect-api.primeatnit.workers.dev https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>Admin | MES Architect</title>
+<meta name="theme-color" content="#060b14">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">MES Architect <span>admin</span></div>
+  <div class="who" id="who" hidden><span id="whoEmail"></span><button type="button" id="signOut" class="ghost">Sign out</button></div>
+</header>
+
+<main id="app">
+  <section id="signin" class="signin" hidden>
+    <h1>Sign in</h1>
+    <p class="muted">Use your MES Architect account. Only admin emails get in.</p>
+    <form id="signinForm">
+      <label>Email <input type="email" id="siEmail" autocomplete="username" required></label>
+      <label>Password <input type="password" id="siPassword" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">Sign in</button>
+      <p class="error" id="siError" role="alert"></p>
+    </form>
+  </section>
+
+  <section id="panel" hidden>
+    <nav class="tabs" role="tablist" aria-label="Admin sections">
+      <button type="button" role="tab" data-tab="overview" aria-selected="true">Overview</button>
+      <button type="button" role="tab" data-tab="purchases" aria-selected="false">Purchases</button>
+      <button type="button" role="tab" data-tab="customer" aria-selected="false">Customer</button>
+      <button type="button" role="tab" data-tab="promos" aria-selected="false">Offers &amp; codes</button>
+      <button type="button" role="tab" data-tab="audit" aria-selected="false">Activity</button>
+    </nav>
+    <p class="notice" id="notice" role="status" aria-live="polite" hidden></p>
+    <div id="view" class="view"></div>
+  </section>
+</main>
+
+<script src="assets/backend-config.js"></script>
+<script src="assets/admin.js"></script>
+</body>
+</html>
